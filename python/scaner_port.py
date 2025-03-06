@@ -4,34 +4,33 @@ from datetime import datetime
 import os
 
 def scan_port(ip, port):
-    """
-    Escanea un puerto específico en la dirección IP proporcionada.
-    """
+    """Escanea un puerto específico en la dirección IP proporcionada."""
     try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1)
-        result = sock.connect_ex((ip, port))
-        if result == 0:
-            print(f"Puerto {port} está abierto")
-        sock.close()
-    except Exception as e:
-        print(f"Error al escanear el puerto {port}: {e}")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Mejora el rendimiento del socket
+            sock.settimeout(0.5)  # Reduce el tiempo de espera de conexión
+            if sock.connect_ex((ip, port)) == 0:
+                print(f"Puerto {port} abierto")
+    except Exception:
+        pass  # Evita imprimir errores innecesarios para acelerar la ejecución
+
+def scan_port_range(ip, ports):
+    """Escanea un conjunto de puertos usando múltiples hilos en cada proceso."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=256) as executor:
+        executor.map(lambda port: scan_port(ip, port), ports, chunksize=100)  # Ajuste de chunk_size para eficiencia
 
 def scan_all_ports(ip):
-    """
-    Escanea todos los puertos (1-65535) en la dirección IP proporcionada.
-    """
-    print(f"Escaneando todos los puertos en {ip}...")
+    """Divide el escaneo en múltiples procesos para aprovechar todos los núcleos de la CPU."""
     start_time = datetime.now()
 
-    # Ajustar max_workers basado en los núcleos de la CPU
-    cpu_cores = os.cpu_count() or 1  # Si os.cpu_count() devuelve None, usa 1
-    max_workers = cpu_cores * 128  # Ajusta el multiplicador según sea necesario
-    print(f"Usando {max_workers} hilos para el escaneo...")
+    cpu_cores = os.cpu_count() or 1
+    num_processes = min(cpu_cores, 8)  # Evita la sobrecarga de demasiados procesos
+    print(f"Usando {num_processes} procesos con 256 hilos cada uno...")
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(scan_port, ip, port) for port in range(1, 65536)]
-        concurrent.futures.wait(futures)
+    port_ranges = [list(range(start, min(start + 8192, 65536))) for start in range(1, 65536, 8192)]  # Dividir puertos
+
+    with concurrent.futures.ProcessPoolExecutor(max_workers=num_processes) as executor:
+        executor.map(scan_port_range, [ip] * len(port_ranges), port_ranges, chunksize=1)  # Ejecuta en paralelo
 
     end_time = datetime.now()
     print(f"Escaneo completado en: {end_time - start_time}")
