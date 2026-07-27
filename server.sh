@@ -1,6 +1,28 @@
 #!/bin/bash
 set -eo pipefail
 
+# ==============================================================================
+# Script: server.sh
+# Descripción: Script de aprovisionamiento base (bootstrap) para servidores
+#              nuevos basados en Rocky Linux (soporta v8, v9 y v10).
+#              Prepara el entorno con configuraciones esenciales de sistema,
+#              seguridad y repositorios.
+#
+# Pasos generales que realiza:
+#   1. Validación de permisos (root) y detección de versión del SO.
+#   2. Habilitación de repositorios extra (EPEL, CRB/Powertools, RPM Fusion).
+#   3. Actualización completa del sistema operativo.
+#   4. Instalación de herramientas base de red y administración.
+#   5. Configuración del Hostname (por variable de entorno) y Zona Horaria.
+#   6. Ajustes de seguridad: SELinux en permisivo e instalación de Fail2Ban para SSH.
+#   7. Mejoras de entorno: Historial de bash con fecha y hora.
+#   8. Tuning de rendimiento: Incremento de límites de red y descriptores (sysctl/limits).
+#   9. Limpieza de paquetes huérfanos/caché y reinicio automático del servidor.
+#
+# Uso:
+# curl -fsSL "https://raw.githubusercontent.com/byc0d3/scripts/main/server.sh?$(date +%s)" -o /tmp/server.sh && sudo HOSTNAME="mi-server" bash /tmp/server.sh
+# ==============================================================================
+
 # Configuración por defecto
 TARGET_HOSTNAME="${HOSTNAME:-server-app01-pro}"
 
@@ -72,7 +94,7 @@ add_rpm_fusion() {
 configure_fail2ban() {
     echo "[8/10] Instalando y configurando Fail2Ban..."
     dnf install -y fail2ban
-    
+
     # Crear configuración local para SSH
     cat > /etc/fail2ban/jail.local << 'EOF'
 [DEFAULT]
@@ -83,13 +105,13 @@ maxretry = 5
 [sshd]
 enabled = true
 EOF
-    
+
     systemctl enable --now fail2ban
 }
 
 configure_sysctl() {
     echo "[9/10] Aplicando tuning del sistema (sysctl y limits)..."
-    
+
     # Tuning de file descriptors y usuarios (limits.conf)
     cat > /etc/security/limits.d/99-custom-limits.conf << 'EOF'
 * soft nofile 100000
@@ -120,7 +142,7 @@ cleanup_system() {
 
 main() {
     echo "--- Iniciando Preparación del Sistema (Rocky Linux) ---"
-    
+
     check_root
     detect_version
     setup_repos
@@ -133,7 +155,7 @@ main() {
     configure_fail2ban
     configure_sysctl
     cleanup_system
-    
+
     echo "--------------------------------------------------"
     echo "✅ Proceso finalizado correctamente."
     echo "⚠️  SELinux está en modo permisivo. Si es producción, cambie a enforcing."
