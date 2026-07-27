@@ -12,9 +12,10 @@ set -eo pipefail
 #   3. Instalación de repositorios oficiales de PostgreSQL y binarios.
 #   4. Inicialización del cluster de base de datos.
 #   5. Configuración de red y seguridad (listen_addresses, SCRAM-SHA-256).
-#   6. Arranque del servicio postgresql.
-#   7. Generación de contraseña segura aleatoria para el superusuario 'postgres'.
-#   8. Limpieza del instalador.
+#   6. Configuración de Firewall (habilitar postgresql).
+#   7. Arranque del servicio postgresql.
+#   8. Generación de contraseña segura aleatoria para el superusuario 'postgres'.
+#   9. Limpieza del instalador.
 #
 # Uso:
 #   # Interactivo:
@@ -61,14 +62,14 @@ check_existing_install() {
 select_pg_version() {
     if [[ -n "$TARGET_PG_VERSION" ]]; then
         PG_V="$TARGET_PG_VERSION"
-        echo "[1/7] Usando versión de PostgreSQL proporcionada por entorno: $PG_V"
+        echo "[1/8] Usando versión de PostgreSQL proporcionada por entorno: $PG_V"
         
         if [[ ! "$PG_V" =~ ^(17|18)$ ]]; then
             echo "❌ Error: Versión $PG_V no soportada. Use 17 o 18." >&2
             exit 1
         fi
     else
-        echo "[1/7] Seleccione la versión de PostgreSQL:"
+        echo "[1/8] Seleccione la versión de PostgreSQL:"
         echo "1) PostgreSQL 17"
         echo "2) PostgreSQL 18"
         read -p "Elija una opción [1-2]: " OPCION
@@ -83,14 +84,14 @@ select_pg_version() {
 }
 
 install_postgres() {
-    echo "[2/7] Instalando repositorios y paquetes de PostgreSQL $PG_V..."
+    echo "[2/8] Instalando repositorios y paquetes de PostgreSQL $PG_V..."
     dnf install -y "$PG_REPO"
     dnf -qy module disable postgresql
     dnf install -y postgresql${PG_V}-server postgresql${PG_V}-contrib
 }
 
 init_db() {
-    echo "[3/7] Inicializando cluster de base de datos..."
+    echo "[3/8] Inicializando cluster de base de datos..."
     if [ ! -d "/var/lib/pgsql/${PG_V}/data/base" ]; then
         /usr/pgsql-${PG_V}/bin/postgresql-${PG_V}-setup initdb
     else
@@ -99,7 +100,7 @@ init_db() {
 }
 
 configure_postgres() {
-    echo "[4/7] Configurando red y seguridad (SCRAM-SHA-256)..."
+    echo "[4/8] Configurando red y seguridad (SCRAM-SHA-256)..."
     local PG_CONF="/var/lib/pgsql/${PG_V}/data/postgresql.conf"
     local PG_HBA="/var/lib/pgsql/${PG_V}/data/pg_hba.conf"
 
@@ -122,14 +123,25 @@ configure_postgres() {
     fi
 }
 
+configure_firewall() {
+    echo "[5/8] Configurando reglas de firewall para PostgreSQL..."
+    if systemctl is-active --quiet firewalld; then
+        firewall-cmd --permanent --add-service=postgresql
+        firewall-cmd --reload
+        echo " ✓ Puerto de PostgreSQL (5432) abierto en el firewall."
+    else
+        echo "⚠️ Firewalld no está activo, omitiendo configuración de puertos."
+    fi
+}
+
 start_services() {
-    echo "[5/7] Habilitando y reiniciando servicio PostgreSQL..."
+    echo "[6/8] Habilitando y reiniciando servicio PostgreSQL..."
     systemctl enable --now postgresql-${PG_V}
     systemctl restart postgresql-${PG_V}
 }
 
 configure_password() {
-    echo "[6/7] Generando contraseña para el superusuario 'postgres'..."
+    echo "[7/8] Generando contraseña para el superusuario 'postgres'..."
     # Filtramos la contraseña para evitar carácteres prohibidos en clientes como DBeaver
     DB_PASS=$(openssl rand -base64 20 | tr -dc 'a-zA-Z0-9' | head -c 16)
 
@@ -139,7 +151,7 @@ EOF
 }
 
 cleanup() {
-    echo "[7/7] Tareas finales..."
+    echo "[8/8] Tareas finales..."
     echo "--------------------------------------------------"
     echo "✅ DESPLIEGUE COMPLETADO CON ÉXITO"
     echo "--------------------------------------------------"
@@ -162,6 +174,7 @@ main() {
     install_postgres
     init_db
     configure_postgres
+    configure_firewall
     start_services
     configure_password
     cleanup

@@ -4,7 +4,7 @@ set -eo pipefail
 # ==============================================================================
 # Script: php.sh
 # Descripción: Script para instalar Nginx y PHP (vía Remi Repository) en
-#              sistemas Rocky Linux (9/10). 
+#              sistemas Rocky Linux (9/10).
 #              Configura PHP-FPM para trabajar con Nginx de forma automática.
 #
 # Pasos generales que realiza:
@@ -38,7 +38,7 @@ check_root() {
 detect_version() {
     ROCKY_VERSION=$(rpm -E %rhel)
     echo "📌 Versión detectada: Rocky Linux $ROCKY_VERSION"
-    
+
     if [[ "$ROCKY_VERSION" -ne 9 && "$ROCKY_VERSION" -ne 10 ]]; then
         echo "❌ Error: Versión no soportada. Este script requiere Rocky Linux 9 o 10." >&2
         exit 1
@@ -56,7 +56,7 @@ select_php_version() {
     if [[ -n "$TARGET_PHP_VERSION" ]]; then
         PHP_V="$TARGET_PHP_VERSION"
         echo "[1/8] Usando versión de PHP proporcionada por entorno: $PHP_V"
-        
+
         # Validar que la versión pasada sea una de las soportadas
         if [[ ! "$PHP_V" =~ ^(7\.4|8\.1|8\.2|8\.3|8\.4|8\.5)$ ]]; then
             echo "❌ Error: Versión $PHP_V no soportada por este script." >&2
@@ -71,7 +71,7 @@ select_php_version() {
         echo "5) PHP 8.4"
         echo "6) PHP 8.5"
         read -p "Elija una opción [1-6]: " OPCION
-        
+
         case $OPCION in
             1) PHP_V="7.4" ;;
             2) PHP_V="8.1" ;;
@@ -87,7 +87,7 @@ select_php_version() {
 
 install_repos() {
     echo "[2/8] Instalando repositorios necesarios (EPEL, CRB, Remi)..."
-    
+
     dnf config-manager --set-enabled crb
     dnf install -y epel-release
     dnf install -y "$REMI_REPO"
@@ -102,7 +102,7 @@ install_php() {
     echo "[4/8] Activando módulo e instalando paquetes de PHP $PHP_V..."
     dnf module reset php -y
     dnf module enable php:remi-$PHP_V -y
-    
+
     dnf install -y php-fpm php-cli php-common php-intl php-mbstring \
         php-xml php-gd php-curl php-mysqlnd php-pgsql php-opcache \
         php-zip php-bcmath php-soap
@@ -111,7 +111,7 @@ install_php() {
 configure_php_fpm() {
     echo "[5/8] Configurando PHP-FPM para Nginx..."
     local FILE="/etc/php-fpm.d/www.conf"
-    
+
     if [[ -f "$FILE" ]]; then
         sed -i 's/^user =.*/user = nginx/' "$FILE"
         sed -i 's/^group =.*/group = nginx/' "$FILE"
@@ -125,7 +125,6 @@ configure_php_fpm() {
 
 configure_firewall() {
     echo "[6/8] Configurando reglas de firewall..."
-    # Verificar si firewalld está activo antes de intentar agregar reglas
     if systemctl is-active --quiet firewalld; then
         firewall-cmd --permanent --add-service=http
         firewall-cmd --permanent --add-service=https
@@ -145,7 +144,7 @@ enable_services() {
 cleanup() {
     echo "[8/8] Tareas finales..."
     echo "✅ ¡Instalación de PHP $PHP_V en ${ID^} $VERSION_ID finalizada con éxito!"
-    
+
     # Autoeliminación del script
     echo "🗑️ Eliminando instalador..."
     rm -- "$0"
@@ -153,7 +152,7 @@ cleanup() {
 
 main() {
     echo "--- Iniciando Instalación de Servidor Web (Nginx + PHP) ---"
-    
+
     check_root
     detect_version
     select_php_version
