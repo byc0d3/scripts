@@ -3,7 +3,7 @@ set -eo pipefail
 
 # ==============================================================================
 # Script: mariadb.sh
-# Descripción: Script de instalación y configuración segura de MariaDB (10.11/11.4)
+# Descripción: Script de instalación y configuración segura de MariaDB
 #              en Rocky Linux (9/10).
 #
 # Pasos generales que realiza:
@@ -13,7 +13,7 @@ set -eo pipefail
 #   4. Configuración básica de red (bind-address).
 #   5. Arranque del servicio MariaDB.
 #   6. Configuración de Firewall (habilitar puerto mysql - 3306).
-#   7. Ejecución de mysql_secure_installation automatizado (generación de clave).
+#   7. Securización, bloqueo de root remoto y creación del usuario 'admindb'.
 #   8. Limpieza del instalador.
 #
 # Uso:
@@ -43,7 +43,6 @@ check_existing_install() {
         echo "--------------------------------------------------"
         echo "❌ ERROR: Se detectó una instalación previa de MariaDB o MySQL."
         echo "Abortando para proteger la integridad de los datos existentes."
-        echo "Si desea reinstalar, elimine manualmente los paquetes y el directorio /var/lib/mysql"
         echo "--------------------------------------------------"
         exit 1
     fi
@@ -75,7 +74,7 @@ gpgkey = https://rpm.mariadb.org/RPM-GPG-KEY-MariaDB
 gpgcheck = 1
 EOF
 
-    # Deshabilitar módulo mariadb de Rocky para evitar conflictos con el repositorio oficial
+    # Deshabilitar módulo mariadb de Rocky para evitar conflictos
     dnf -qy module disable mariadb || true
     dnf install -y MariaDB-server MariaDB-client
 }
@@ -84,7 +83,6 @@ configure_mariadb() {
     echo "[3/8] Configurando parámetros de red..."
     local MDB_CONF="/etc/my.cnf.d/server.cnf"
     
-    # Forzar que escuche en todas las interfaces para permitir conexiones externas (si se requiere)
     if [ -f "$MDB_CONF" ]; then
         if ! grep -qE "^bind-address" "$MDB_CONF"; then
             if grep -q "^\[mariadb\]" "$MDB_CONF"; then
@@ -105,7 +103,6 @@ start_services() {
 configure_firewall() {
     echo "[5/8] Configurando reglas de firewall para MariaDB..."
     if systemctl is-active --quiet firewalld; then
-        # MariaDB usa por defecto el servicio 'mysql' (puerto 3306) en firewalld
         firewall-cmd --permanent --add-service=mysql
         firewall-cmd --reload
         echo " ✓ Puerto de MariaDB (3306) abierto en el firewall."
@@ -115,17 +112,20 @@ configure_firewall() {
 }
 
 secure_installation() {
-    echo "[6/8] Securizando instalación y generando contraseña root..."
-    # Generar password segura para root
+    echo "[6/8] Securizando instalación y creando usuarios..."
     DB_PASS=$(openssl rand -base64 20 | tr -dc 'a-zA-Z0-9' | head -c 16)
+    ADMIN_PASS=$(openssl rand -base64 20 | tr -dc 'a-zA-Z0-9' | head -c 16)
 
-    # Equivalente automatizado a mysql_secure_installation
+    # Equivalente a mysql_secure_installation y creación del usuario admindb
     mysql -u root <<EOF
 ALTER USER 'root'@'localhost' IDENTIFIED BY '$DB_PASS';
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;
 DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+
+CREATE USER 'admindb'@'%' IDENTIFIED BY '$ADMIN_PASS';
+GRANT ALL PRIVILEGES ON *.* TO 'admindb'@'%' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 EOF
 }
@@ -136,8 +136,12 @@ cleanup() {
     echo "✅ DESPLIEGUE COMPLETADO CON ÉXITO"
     echo "--------------------------------------------------"
     echo "Versión: MariaDB $MDB_V"
-    echo "Usuario: root"
-    echo "Password: $DB_PASS"
+    echo ""
+    echo "🛡️ Usuario Local (Bloqueado remotamente): root"
+    echo "🔑 Password: $DB_PASS"
+    echo ""
+    echo "🌍 Usuario Remoto (Full privilegios): admindb"
+    echo "🔑 Password: $ADMIN_PASS"
     echo "--------------------------------------------------"
     
     echo "🗑️ Eliminando instalador..."

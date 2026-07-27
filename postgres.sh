@@ -14,17 +14,13 @@ set -eo pipefail
 #   5. Configuración de red y seguridad (listen_addresses, SCRAM-SHA-256).
 #   6. Configuración de Firewall (habilitar postgresql).
 #   7. Arranque del servicio postgresql.
-#   8. Generación de contraseña segura aleatoria para el superusuario 'postgres'.
+#   8. Bloqueo remoto del usuario 'postgres' y creación del usuario 'admindb'.
 #   9. Limpieza del instalador.
 #
 # Uso:
-#   # Interactivo:
 #   curl -fsSL "URL" -o /tmp/postgres.sh && sudo bash /tmp/postgres.sh
-#   # No interactivo:
-#   curl -fsSL "URL" -o /tmp/postgres.sh && sudo PG_VERSION="17" bash /tmp/postgres.sh
 # ==============================================================================
 
-# Permite pasar la versión como variable de entorno
 TARGET_PG_VERSION="${PG_VERSION:-}"
 
 check_root() {
@@ -43,7 +39,6 @@ detect_version() {
         exit 1
     fi
 
-    # Repositorio oficial de PostgreSQL según versión de OS
     PG_REPO="https://download.postgresql.org/pub/repos/yum/reporpms/EL-${ROCKY_VERSION}-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
 }
 
@@ -53,7 +48,6 @@ check_existing_install() {
         echo "--------------------------------------------------"
         echo "❌ ERROR: Se detectó una instalación previa de PostgreSQL."
         echo "Abortando para proteger la integridad de los datos existentes."
-        echo "Si desea reinstalar, elimine manualmente los paquetes y el directorio /var/lib/pgsql"
         echo "--------------------------------------------------"
         exit 1
     fi
@@ -116,9 +110,15 @@ configure_postgres() {
         sed -i "s/^[#]*\s*password_encryption\s*=.*/password_encryption = scram-sha-256/" "$PG_CONF"
     fi
 
-    if grep -qE "^host\s+all\s+all\s+0\.0\.0\.0/0\s+scram-sha-256" "$PG_HBA"; then
-        echo " ✓ La regla de acceso global ya existe en pg_hba.conf"
+    if grep -qE "^host\s+all\s+postgres\s+0\.0\.0\.0/0\s+reject" "$PG_HBA"; then
+        echo " ✓ La regla de acceso global y bloqueo de postgres remoto ya existe."
     else
+        # Limpiamos reglas previas de acceso total (si existen por ejecuciones anteriores)
+        sed -i '/0\.0\.0\.0\/0/d' "$PG_HBA"
+        
+        # Bloqueamos estrictamente al usuario 'postgres' desde el exterior
+        echo "host    all             postgres        0.0.0.0/0               reject" >> "$PG_HBA"
+        # Permitimos acceso al resto de usuarios (como admindb) desde el exterior
         echo "host    all             all             0.0.0.0/0               scram-sha-256" >> "$PG_HBA"
     fi
 }
@@ -140,14 +140,21 @@ start_services() {
     systemctl restart postgresql-${PG_V}
 }
 
-configure_password() {
-    echo "[7/8] Generando contraseña para el superusuario 'postgres'..."
-    # Filtramos la contraseña para evitar carácteres prohibidos en clientes como DBeaver
+configure_users() {
+    echo "[7/8] Configurando usuarios de base de datos..."
     DB_PASS=$(openssl rand -base64 20 | tr -dc 'a-zA-Z0-9' | head -c 16)
+    ADMIN_PASS=$(openssl rand -base64 20 | tr -dc 'a-zA-Z0-9' | head -c 16)
 
+    # Creamos contraseñas para postgres y el nuevo usuario admindb con privilegios máximos
     sudo -u postgres psql <<EOF
 ALTER USER postgres WITH PASSWORD '$DB_PASS';
+CREATE ROLE admindb WITH LOGIN SUPERUSER PASSWORD '$ADMIN_PASS';
 EOF
+
+    echo " 🔒 Reforzando seguridad local en pg_hba.conf..."
+    local PG_HBA="/var/lib/pgsql/${PG_V}/data/pg_hba.conf"
+    sed -i -e 's/peer/scram-sha-256/g' -e 's/ident/scram-sha-256/g' "$PG_HBA"
+    systemctl reload postgresql-${PG_V}
 }
 
 cleanup() {
@@ -156,8 +163,12 @@ cleanup() {
     echo "✅ DESPLIEGUE COMPLETADO CON ÉXITO"
     echo "--------------------------------------------------"
     echo "Versión: PostgreSQL $PG_V"
-    echo "Usuario: postgres"
-    echo "Password: $DB_PASS"
+    echo ""
+    echo "🛡️ Usuario Local (Bloqueado remotamente): postgres"
+    echo "🔑 Password: $DB_PASS"
+    echo ""
+    echo "🌍 Usuario Remoto (Full privilegios): admindb"
+    echo "🔑 Password: $ADMIN_PASS"
     echo "--------------------------------------------------"
     
     echo "🗑️ Eliminando instalador..."
@@ -176,7 +187,7 @@ main() {
     configure_postgres
     configure_firewall
     start_services
-    configure_password
+    configure_users
     cleanup
 }
 
