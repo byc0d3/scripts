@@ -4,23 +4,26 @@ set -eo pipefail
 # ==============================================================================
 # Script: set_network.sh
 # Descripción: Configuración avanzada de red en Rocky Linux mediante nmcli.
-#              Configura IP Estática, Gateway y Policy Based Routing (PBR)
-#              para evitar enrutamiento asimétrico en múltiples interfaces.
+#              Configura IP Estática y opcionalmente Gateway y Policy Based 
+#              Routing (PBR) para evitar enrutamiento asimétrico.
 #
 # Pasos generales:
 #   1. Validación de root.
 #   2. Recopilación de parámetros (interactiva o por variables de entorno).
 #   3. Eliminación de perfil previo para evitar conflictos.
-#   4. Creación de nueva conexión con IP estática y Gateway.
-#   5. Configuración de reglas de enrutamiento en tabla específica.
+#   4. Creación de nueva conexión con IP estática.
+#   5. Configuración de Gateway y reglas de PBR (solo si se especifica Gateway).
 #   6. Activación de la interfaz.
 #
 # Uso:
 #   # Interactivo:
 #   curl -fsSL "URL" -o /tmp/set_network.sh && sudo bash /tmp/set_network.sh
 #
-#   # No interactivo:
+#   # No interactivo (Con Gateway):
 #   sudo DEVICE="ens224" IP="10.31.196.49" PREFIX="25" GW="10.31.196.1" bash /tmp/set_network.sh
+#
+#   # No interactivo (Sin Gateway - Red local):
+#   sudo DEVICE="ens225" IP="192.168.10.5" PREFIX="24" GW="" bash /tmp/set_network.sh
 # ==============================================================================
 
 # Variables globales (por defecto o desde entorno)
@@ -46,23 +49,30 @@ gather_parameters() {
     if [[ -z "$PREFIX" ]]; then
         read -p "Máscara/Prefijo (ej. 25): " PREFIX
     fi
-    if [[ -z "$GW" ]]; then
-        read -p "Gateway (ej. 10.31.196.1): " GW
+    
+    # El GW ahora es opcional. Usamos una comprobación especial para saber si 
+    # se pasó como variable vacía (GW="") o si simplemente no se pasó.
+    if [[ -z "${GW+x}" ]]; then
+        read -p "Gateway (Dejar en blanco si es interfaz local/no enrutada): " GW
     fi
     
-    # Validación de variables vacías
-    if [[ -z "$DEVICE" || -z "$IP" || -z "$PREFIX" || -z "$GW" ]]; then
-        echo "❌ Error: Todos los parámetros de red son obligatorios." >&2
+    # Validación de variables obligatorias
+    if [[ -z "$DEVICE" || -z "$IP" || -z "$PREFIX" ]]; then
+        echo "❌ Error: Dispositivo, IP y Prefijo son obligatorios." >&2
         exit 1
     fi
     
-    echo " ✓ Configuración a aplicar en: $DEVICE ($IP/$PREFIX, GW: $GW, Tabla: $TABLE)"
+    if [[ -n "$GW" ]]; then
+        echo " ✓ Configuración a aplicar: $DEVICE ($IP/$PREFIX, GW: $GW, Tabla PBR: $TABLE)"
+    else
+        echo " ✓ Configuración a aplicar: $DEVICE ($IP/$PREFIX, Sin Gateway / Red Local)"
+    fi
 }
 
 configure_profile() {
     echo "[2/4] Eliminando perfil anterior y creando nueva conexión..."
     
-    # Eliminamos el perfil previo si existe para evitar conflictos (el "|| true" evita que falle si no existe)
+    # Eliminamos el perfil previo si existe para evitar conflictos
     nmcli con delete "$DEVICE" > /dev/null 2>&1 || true
     
     # Creamos la nueva conexión con ip estática
@@ -76,23 +86,29 @@ configure_profile() {
 }
 
 configure_routing() {
-    echo "[3/4] Configurando enrutamiento y Policy Based Routing (PBR)..."
-    
-    # Gateway y enrutamiento a la tabla específica
-    nmcli con mod "$DEVICE" ipv4.gateway "$GW"
-    nmcli con mod "$DEVICE" ipv4.route-table "$TABLE"
-    
-    # Limpiamos reglas previas y aplicamos las nuevas con prioridad 5
-    nmcli con mod "$DEVICE" ipv4.routing-rules ""
-    nmcli con mod "$DEVICE" +ipv4.routing-rules "priority 5 iif ${DEVICE} table ${TABLE}"
-    nmcli con mod "$DEVICE" +ipv4.routing-rules "priority 5 from ${IP} table ${TABLE}"
-    
-    echo " ✓ Reglas PBR aplicadas (Tabla: $TABLE, Prioridad: 5)."
+    # Si el usuario proporcionó un Gateway, aplicamos PBR
+    if [[ -n "$GW" ]]; then
+        echo "[3/4] Configurando enrutamiento y Policy Based Routing (PBR)..."
+        
+        # Gateway y enrutamiento a la tabla específica
+        nmcli con mod "$DEVICE" ipv4.gateway "$GW"
+        nmcli con mod "$DEVICE" ipv4.route-table "$TABLE"
+        
+        # Limpiamos reglas previas y aplicamos las nuevas con prioridad 5
+        nmcli con mod "$DEVICE" ipv4.routing-rules ""
+        nmcli con mod "$DEVICE" +ipv4.routing-rules "priority 5 iif ${DEVICE} table ${TABLE}"
+        nmcli con mod "$DEVICE" +ipv4.routing-rules "priority 5 from ${IP} table ${TABLE}"
+        
+        echo " ✓ Reglas PBR aplicadas (Tabla: $TABLE, Prioridad: 5)."
+    else
+        # Si no hay Gateway, la interfaz solo sirve para la red directamente conectada
+        echo "[3/4] Interfaz no enrutada. Omitiendo configuración de Gateway y PBR..."
+    fi
 }
 
 apply_network() {
     echo "[4/4] Levantando interfaz de red..."
-    # Levantamos la conexión (esto aplica inmediatamente los cambios a nivel sistema)
+    # Levantamos la conexión
     nmcli con up "$DEVICE" > /dev/null
     
     echo "--------------------------------------------------"
@@ -100,13 +116,17 @@ apply_network() {
     echo "--------------------------------------------------"
     echo "Dispositivo : $DEVICE"
     echo "IP asignada : $IP/$PREFIX"
-    echo "Gateway     : $GW"
-    echo "Tabla (PBR) : $TABLE"
+    if [[ -n "$GW" ]]; then
+        echo "Gateway     : $GW"
+        echo "Tabla (PBR) : $TABLE"
+    else
+        echo "Gateway     : Ninguno (Red Local interna)"
+    fi
     echo "--------------------------------------------------"
 }
 
 main() {
-    echo "--- SYSADMIN: Network Setup (PBR & Static IP) ---"
+    echo "--- SYSADMIN: Network Setup ---"
     
     check_root
     gather_parameters

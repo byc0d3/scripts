@@ -20,9 +20,8 @@ set -eo pipefail
 #
 # Uso:
 #   # Interactivo:
-#   curl -fsSL "URL" -o /tmp/php.sh && sudo bash /tmp/php.sh
-#   # No interactivo:
-#   curl -fsSL "URL" -o /tmp/php.sh && sudo PHP_VERSION="8.3" bash /tmp/php.sh
+#   curl -fsSL "https://raw.githubusercontent.com/byc0d3/scripts/refs/heads/main/postgres.sh?$(date +%s)" -o /tmp/postgres.sh && sudo bash /tmp/postgres.sh
+#   curl -fsSL "https://raw.githubusercontent.com/byc0d3/scripts/refs/heads/main/postgres.sh?$(date +%s)" -o /tmp/postgres.sh && sudo PHP_VERSION="8.3" bash /tmp/postgres.sh
 # ==============================================================================
 
 # Permite pasar la versión de PHP como variable de entorno
