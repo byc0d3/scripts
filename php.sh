@@ -4,11 +4,11 @@ set -eo pipefail
 # ==============================================================================
 # Script: php.sh
 # Descripción: Script para instalar Nginx y PHP (vía Remi Repository) en
-#              sistemas Rocky Linux (9/10) y Fedora (43/44). 
+#              sistemas Rocky Linux (9/10). 
 #              Configura PHP-FPM para trabajar con Nginx de forma automática.
 #
 # Pasos generales que realiza:
-#   1. Validación de root y detección del SO (Rocky o Fedora).
+#   1. Validación de root y detección del SO (Rocky Linux).
 #   2. Selección de versión de PHP (interactiva o por variable de entorno).
 #   3. Instalación de repositorios necesarios (EPEL, CRB, Remi).
 #   4. Instalación de Nginx.
@@ -36,24 +36,18 @@ check_root() {
 }
 
 detect_version() {
-    ID=$(grep -oP '(?<=^ID=).+' /etc/os-release | tr -d '"')
-    VERSION_ID=$(grep -oP '(?<=VERSION_ID=")\d+' /etc/os-release)
-
-    # Validar combinaciones soportadas
-    if [[ "$ID" == "rocky" && ( "$VERSION_ID" == "9" || "$VERSION_ID" == "10" ) ]]; then
-        OS="rocky"
-        REMI_REPO="https://rpms.remirepo.net/enterprise/remi-release-${VERSION_ID}.rpm"
-    elif [[ "$ID" == "fedora" && ( "$VERSION_ID" == "43" || "$VERSION_ID" == "44" ) ]]; then
-        OS="fedora"
-        REMI_REPO="https://rpms.remirepo.net/fedora/remi-release-${VERSION_ID}.rpm"
-    else
-        echo "❌ Error: Sistema operativo o versión no soportado." >&2
-        echo "Soportados: Rocky 9/10, Fedora 43/44" >&2
+    ROCKY_VERSION=$(rpm -E %rhel)
+    echo "📌 Versión detectada: Rocky Linux $ROCKY_VERSION"
+    
+    if [[ "$ROCKY_VERSION" -ne 9 && "$ROCKY_VERSION" -ne 10 ]]; then
+        echo "❌ Error: Versión no soportada. Este script requiere Rocky Linux 9 o 10." >&2
         exit 1
     fi
 
+    # Definir repositorio según la versión
+    REMI_REPO="https://rpms.remirepo.net/enterprise/remi-release-${ROCKY_VERSION}.rpm"
+
     echo "--------------------------------------------------"
-    echo "📌 Sistema detectado: ${ID^} $VERSION_ID"
     echo "📦 Repositorio Remi : $REMI_REPO"
     echo "--------------------------------------------------"
 }
@@ -94,11 +88,8 @@ select_php_version() {
 install_repos() {
     echo "[2/8] Instalando repositorios necesarios (EPEL, CRB, Remi)..."
     
-    if [[ "$OS" == "rocky" ]]; then
-        dnf config-manager --set-enabled crb
-        dnf install -y epel-release
-    fi
-    
+    dnf config-manager --set-enabled crb
+    dnf install -y epel-release
     dnf install -y "$REMI_REPO"
 }
 

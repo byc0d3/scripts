@@ -4,7 +4,7 @@ set -eo pipefail
 # ==============================================================================
 # Script: server.sh
 # Descripción: Script de aprovisionamiento base (bootstrap) para servidores
-#              nuevos basados en Rocky Linux (soporta v8, v9 y v10).
+#              nuevos basados en Rocky Linux (soporta v9 y v10).
 #              Prepara el entorno con configuraciones esenciales de sistema,
 #              seguridad y repositorios.
 #
@@ -37,18 +37,17 @@ check_root() {
 detect_version() {
     ROCKY_VERSION=$(rpm -E %rhel)
     echo "📌 Versión detectada: Rocky Linux $ROCKY_VERSION"
+    
+    if [[ "$ROCKY_VERSION" -ne 9 && "$ROCKY_VERSION" -ne 10 ]]; then
+        echo "❌ Error: Versión no soportada. Este script requiere Rocky Linux 9 o 10." >&2
+        exit 1
+    fi
 }
 
 setup_repos() {
-    echo "[1/10] Configurando EPEL y repositorio de desarrollo..."
-    dnf install epel-release -y
-    if [[ "$ROCKY_VERSION" -eq 8 ]]; then
-        dnf config-manager --set-enabled powertools
-    elif [[ "$ROCKY_VERSION" -eq 9 ]]; then
-        dnf config-manager --set-enabled crb
-    elif [[ "$ROCKY_VERSION" -eq 10 ]]; then
-        dnf config-manager --set-enabled crb
-    fi
+    echo "[1/10] Configurando EPEL y repositorio de desarrollo (CRB)..."
+    dnf config-manager --set-enabled crb
+    dnf install -y epel-release
 }
 
 update_system() {
