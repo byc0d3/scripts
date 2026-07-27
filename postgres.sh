@@ -8,7 +8,7 @@ set -eo pipefail
 #
 # Pasos generales que realiza:
 #   1. Validación de root, versión del SO y verificación de instalaciones previas.
-#   2. Selección de versión de PostgreSQL (interactiva o por variable de entorno).
+#   2. Preparación de la instalación de PostgreSQL 18.
 #   3. Instalación de repositorios oficiales de PostgreSQL y binarios.
 #   4. Inicialización del cluster de base de datos.
 #   5. Configuración de red y seguridad (listen_addresses, SCRAM-SHA-256).
@@ -20,8 +20,6 @@ set -eo pipefail
 # Uso:
 #   curl -fsSL "URL" -o /tmp/postgres.sh && sudo bash /tmp/postgres.sh
 # ==============================================================================
-
-TARGET_PG_VERSION="${PG_VERSION:-}"
 
 check_root() {
     if [[ $EUID -ne 0 ]]; then
@@ -54,27 +52,8 @@ check_existing_install() {
 }
 
 select_pg_version() {
-    if [[ -n "$TARGET_PG_VERSION" ]]; then
-        PG_V="$TARGET_PG_VERSION"
-        echo "[1/8] Usando versión de PostgreSQL proporcionada por entorno: $PG_V"
-        
-        if [[ ! "$PG_V" =~ ^(17|18)$ ]]; then
-            echo "❌ Error: Versión $PG_V no soportada. Use 17 o 18." >&2
-            exit 1
-        fi
-    else
-        echo "[1/8] Seleccione la versión de PostgreSQL:"
-        echo "1) PostgreSQL 17"
-        echo "2) PostgreSQL 18"
-        read -p "Elija una opción [1-2]: " OPCION
-        
-        case $OPCION in
-            1) PG_V="17" ;;
-            2) PG_V="18" ;;
-            *) echo "❌ Opción no válida. Abortando."; exit 1 ;;
-        esac
-    fi
-    echo "✅ Has seleccionado PostgreSQL $PG_V. Iniciando instalación..."
+    PG_V="18"
+    echo "[1/8] Preparando instalación de PostgreSQL $PG_V (Última versión)..."
 }
 
 install_postgres() {
