@@ -18,7 +18,7 @@ set -eo pipefail
 #   9. Limpieza del instalador.
 #
 # Uso:
-#   curl -fsSL "URL" -o /tmp/postgres.sh && sudo bash /tmp/postgres.sh
+#   curl -fsSL "https://raw.githubusercontent.com/byc0d3/scripts/refs/heads/main/postgres.sh?$(date +%s)" -o /tmp/postgres.sh && sudo bash /tmp/postgres.sh
 # ==============================================================================
 
 check_root() {
@@ -31,7 +31,7 @@ check_root() {
 detect_version() {
     ROCKY_VERSION=$(rpm -E %rhel)
     echo "📌 Versión detectada: Rocky Linux $ROCKY_VERSION"
-    
+
     if [[ "$ROCKY_VERSION" -ne 9 && "$ROCKY_VERSION" -ne 10 ]]; then
         echo "❌ Error: Versión no soportada. Este script requiere Rocky Linux 9 o 10." >&2
         exit 1
@@ -94,7 +94,7 @@ configure_postgres() {
     else
         # Limpiamos reglas previas de acceso total (si existen por ejecuciones anteriores)
         sed -i '/0\.0\.0\.0\/0/d' "$PG_HBA"
-        
+
         # Bloqueamos estrictamente al usuario 'postgres' desde el exterior
         echo "host    all             postgres        0.0.0.0/0               reject" >> "$PG_HBA"
         # Permitimos acceso al resto de usuarios (como admindb) desde el exterior
@@ -149,14 +149,14 @@ cleanup() {
     echo "🌍 Usuario Remoto (Full privilegios): admindb"
     echo "🔑 Password: $ADMIN_PASS"
     echo "--------------------------------------------------"
-    
+
     echo "🗑️ Eliminando instalador..."
     rm -- "$0"
 }
 
 main() {
     echo "--- DB ARCHITECT: PostgreSQL Deployment (Safe Mode) ---"
-    
+
     check_root
     detect_version
     check_existing_install

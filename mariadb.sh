@@ -17,7 +17,7 @@ set -eo pipefail
 #   8. Limpieza del instalador.
 #
 # Uso:
-#   curl -fsSL "URL" -o /tmp/mariadb.sh && sudo bash /tmp/mariadb.sh
+#   curl -fsSL "https://raw.githubusercontent.com/byc0d3/scripts/refs/heads/main/mariadb.sh?$(date +%s)" -o /tmp/mariadb.sh && sudo bash /tmp/mariadb.sh
 # ==============================================================================
 
 check_root() {
@@ -30,7 +30,7 @@ check_root() {
 detect_version() {
     ROCKY_VERSION=$(rpm -E %rhel)
     echo "📌 Versión detectada: Rocky Linux $ROCKY_VERSION"
-    
+
     if [[ "$ROCKY_VERSION" -ne 9 && "$ROCKY_VERSION" -ne 10 ]]; then
         echo "❌ Error: Versión no soportada. Este script requiere Rocky Linux 9 o 10." >&2
         exit 1
@@ -50,22 +50,22 @@ check_existing_install() {
 
 select_mdb_version() {
     echo "[1/8] Detectando última versión estable desde la API de MariaDB..."
-    
+
     # Consultar a la API oficial de MariaDB por la versión mayor catalogada como "Stable"
     MDB_V=$(curl -sS https://downloads.mariadb.org/rest-api/mariadb/ | jq -r '.major_releases[] | select(.release_status=="Stable") | .release_id' | sort -V | tail -n 1)
-    
+
     if [[ -z "$MDB_V" ]]; then
         echo "❌ Error al detectar versión. Revise su conexión o asegúrese de que 'jq' esté instalado." >&2
         exit 1
     fi
-    
+
     echo " ✓ Última estable detectada: $MDB_V"
     echo "✅ Iniciando instalación de MariaDB $MDB_V..."
 }
 
 install_mariadb() {
     echo "[2/8] Configurando repositorio oficial e instalando MariaDB $MDB_V..."
-    
+
     cat > /etc/yum.repos.d/mariadb.repo <<EOF
 [mariadb]
 name = MariaDB
@@ -82,7 +82,7 @@ EOF
 configure_mariadb() {
     echo "[3/8] Configurando parámetros de red..."
     local MDB_CONF="/etc/my.cnf.d/server.cnf"
-    
+
     if [ -f "$MDB_CONF" ]; then
         if ! grep -qE "^bind-address" "$MDB_CONF"; then
             if grep -q "^\[mariadb\]" "$MDB_CONF"; then
@@ -143,14 +143,14 @@ cleanup() {
     echo "🌍 Usuario Remoto (Full privilegios): admindb"
     echo "🔑 Password: $ADMIN_PASS"
     echo "--------------------------------------------------"
-    
+
     echo "🗑️ Eliminando instalador..."
     rm -- "$0"
 }
 
 main() {
     echo "--- DB ARCHITECT: MariaDB Deployment (Safe Mode) ---"
-    
+
     check_root
     detect_version
     check_existing_install

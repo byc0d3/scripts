@@ -15,10 +15,10 @@ set -eo pipefail
 #
 # Uso:
 #   # Interactivo:
-#   curl -fsSL "URL" -o /tmp/extend_volume.sh && sudo bash /tmp/extend_volume.sh
+#   curl -fsSL "https://raw.githubusercontent.com/byc0d3/scripts/refs/heads/main/extend_volume.sh?$(date +%s)" -o /tmp/extend_volume.sh && sudo bash /tmp/extend_volume.sh
 #
 #   # No interactivo:
-#   sudo TARGET_DISK="/dev/sdc" TARGET_PATH="/home" bash /tmp/extend_volume.sh
+#   curl -fsSL "https://raw.githubusercontent.com/byc0d3/scripts/refs/heads/main/extend_volume.sh?$(date +%s)" -o /tmp/extend_volume.sh && sudo TARGET_DISK="/dev/sxx" TARGET_PATH="/directory" bash /tmp/extend_volume.sh
 # ==============================================================================
 
 check_root() {
@@ -30,20 +30,20 @@ check_root() {
 
 gather_parameters() {
     echo "[1/4] Recopilando parámetros del sistema..."
-    
+
     # Soporte para variables de entorno (no interactivo)
     if [[ -n "$TARGET_DISK" ]]; then
         NUEVO_DISCO="$TARGET_DISK"
     else
         read -p "Introduce el nuevo disco (ej. /dev/sdc): " NUEVO_DISCO
     fi
-    
+
     if [[ -n "$TARGET_PATH" ]]; then
         RUTA="$TARGET_PATH"
     else
         read -p "Introduce la ruta a extender (ej. /home): " RUTA
     fi
-    
+
     # Validaciones básicas
     if [[ -z "$NUEVO_DISCO" || -z "$RUTA" ]]; then
         echo "❌ Error: El disco y la ruta son obligatorios." >&2
@@ -65,10 +65,10 @@ gather_parameters() {
 
 analyze_lvm() {
     echo "[2/4] Analizando estructura LVM asociada a '$RUTA'..."
-    
+
     # Extraer el volumen lógico asociado a la ruta
     LV_PATH=$(df "$RUTA" --output=source | tail -1)
-    
+
     # Validar que realmente sea un volumen gestionado por LVM
     if ! lvs "$LV_PATH" > /dev/null 2>&1; then
         echo "❌ Error: '$LV_PATH' no parece ser un Volumen Lógico de LVM." >&2
@@ -77,7 +77,7 @@ analyze_lvm() {
 
     # Extraer el nombre del grupo de volúmenes (VG)
     VG_NAME=$(lvs --noheadings -o vg_name "$LV_PATH" | xargs)
-    
+
     if [[ -z "$VG_NAME" ]]; then
         echo "❌ Error: No se pudo determinar el Volume Group (VG)." >&2
         exit 1
@@ -89,7 +89,7 @@ analyze_lvm() {
 
 extend_lvm() {
     echo "[3/4] Preparando disco y extendiendo el Volumen..."
-    
+
     # Validar si el disco ya pertenece a un LVM para evitar destrucción de datos
     if pvs "$NUEVO_DISCO" > /dev/null 2>&1; then
         echo "❌ Error: El disco '$NUEVO_DISCO' ya forma parte de un LVM existente. Abortando por seguridad." >&2
@@ -98,14 +98,14 @@ extend_lvm() {
 
     echo " -> Creando Physical Volume (PV) en $NUEVO_DISCO..."
     pvcreate -y "$NUEVO_DISCO" > /dev/null
-    
+
     echo " -> Añadiendo el disco al Volume Group '$VG_NAME'..."
     vgextend "$VG_NAME" "$NUEVO_DISCO" > /dev/null
-    
+
     echo " -> Extendiendo Logical Volume y redimensionando File System..."
     # El flag -r (resizefs) detecta si es ext4 o xfs y lo amplía automáticamente
     lvextend -l +100%FREE "$LV_PATH" -r > /dev/null
-    
+
     echo " ✓ Expansión completada correctamente."
 }
 
@@ -124,7 +124,7 @@ cleanup() {
 
 main() {
     echo "--- SYSADMIN: LVM Volume Expansion ---"
-    
+
     check_root
     gather_parameters
     analyze_lvm

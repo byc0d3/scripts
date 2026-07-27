@@ -20,10 +20,10 @@ set -eo pipefail
 #   curl -fsSL "https://raw.githubusercontent.com/byc0d3/scripts/refs/heads/main/set_network.sh?$(date +%s)" -o /tmp/set_network.sh && sudo bash /tmp/set_network.sh
 #
 #   # No interactivo (Con Gateway):
-#   curl -fsSL "https://raw.githubusercontent.com/byc0d3/scripts/refs/heads/main/set_network.sh?$(date +%s)" -o /tmp/set_network.sh && sudo DEVICE="ens224" IP="192.169.1.111" PREFIX="25" GW="192.168.1.1" bash /tmp/set_network.sh
+#   curl -fsSL "https://raw.githubusercontent.com/byc0d3/scripts/refs/heads/main/set_network.sh?$(date +%s)" -o /tmp/set_network.sh && sudo DEVICE="ensxxx" IP="192.169.1.xxx" PREFIX="24" GW="192.168.1.x" bash /tmp/set_network.sh
 #
 #   # No interactivo (Sin Gateway - Red local):
-#   curl -fsSL "https://raw.githubusercontent.com/byc0d3/scripts/refs/heads/main/set_network.sh?$(date +%s)" -o /tmp/set_network.sh && sudo DEVICE="ens256" IP="192.169.1.111" PREFIX="32" GW="192.168.1.1" bash /tmp/set_network.sh
+#   curl -fsSL "https://raw.githubusercontent.com/byc0d3/scripts/refs/heads/main/set_network.sh?$(date +%s)" -o /tmp/set_network.sh && sudo DEVICE="ensxxx" IP="192.169.1.xxx" PREFIX="24" GW="192.168.1.x" bash /tmp/set_network.sh
 # ==============================================================================
 
 # Variables globales (por defecto o desde entorno)
