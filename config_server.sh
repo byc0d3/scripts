@@ -51,50 +51,50 @@ modulo_server() {
     echo -e "${AZ}======================================================${CL}"
     echo -e "${VE}   ➤ Configuración Inicial del Sistema Base${CL}"
     echo -e "${AZ}======================================================${CL}"
-    
+
     echo -e -n "¿Deseas continuar con el proceso? Escribe ${RO}yes${CL} para continuar, u oprima enter para cancelar: "
     read confirmar
-    
+
     if [ "$confirmar" == "yes" ]; then
         check_root
         ROCKY_VERSION=$(rpm -E %rhel)
         echo -e "\n📌 Versión detectada: Rocky Linux $ROCKY_VERSION"
-        
+
         echo "[1/10] Configurando EPEL y repositorio de desarrollo (CRB)..."
         dnf config-manager --set-enabled crb > /dev/null 2>&1 || true
         dnf install -y epel-release > /dev/null 2>&1
-        
+
         echo "[2/10] Actualizando el sistema..."
         dnf upgrade -y > /dev/null
-        
+
         echo "[3/10] Instalando herramientas de administración..."
         dnf install -y dnf-utils nano vim tree wget btop traceroute iproute \
             telnet nmap tcpdump iputils unzip tar rsync util-linux-user \
             nfs-utils bind-utils chrony > /dev/null 2>&1
-        
+
         echo
         read -p "Introduce el nombre del servidor (Hostname): " TARGET_HOSTNAME
         echo
-        
+
         echo "[4/10] Configurando hostname y zona horaria..."
         hostnamectl set-hostname "${TARGET_HOSTNAME:-server-app01}"
         timedatectl set-timezone America/Caracas
         systemctl enable --now chronyd > /dev/null 2>&1
-        
+
         echo "[5/10] Ajustando SELinux a modo permisivo (solo para pruebas)..."
         sed -i 's/SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
         setenforce 0 || true
-        
+
         echo "[6/10] Configurando historial con timestamp..."
         cat > /etc/profile.d/hist_timestamp.sh << 'EOF'
 export HISTTIMEFORMAT='%d-%m-%Y %H:%M:%S '
 EOF
         chmod 644 /etc/profile.d/hist_timestamp.sh
-        
+
         echo "[7/10] Agregando repositorios RPM Fusion..."
         dnf install -y "https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-${ROCKY_VERSION}.noarch.rpm" > /dev/null 2>&1 || true
         dnf install -y "https://mirrors.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-${ROCKY_VERSION}.noarch.rpm" > /dev/null 2>&1 || true
-        
+
         echo "[8/10] Instalando y configurando Fail2Ban..."
         dnf install -y fail2ban > /dev/null 2>&1
         cat > /etc/fail2ban/jail.local << 'EOF'
@@ -107,7 +107,7 @@ maxretry = 5
 enabled = true
 EOF
         systemctl enable --now fail2ban > /dev/null 2>&1
-        
+
         echo "[9/10] Aplicando tuning del sistema (sysctl y limits)..."
         cat > /etc/security/limits.d/99-custom-limits.conf << 'EOF'
 * soft nofile 100000
@@ -123,13 +123,13 @@ net.ipv4.ip_local_port_range = 1024 65535
 net.ipv4.tcp_tw_reuse = 1
 EOF
         sysctl --system > /dev/null 2>&1
-        
+
         echo "[10/10] Limpiando paquetes innecesarios y cache..."
         dnf autoremove -y > /dev/null 2>&1
         dnf clean all > /dev/null 2>&1
-        
+
         proceso_finalizado
-        
+
         echo "⚠️  SELinux está en modo permisivo. Si es producción, cambie a enforcing."
         echo -e "${RO}🔄 El sistema se reiniciará en 10 segundos para aplicar los cambios de SELinux y Hostname.${CL}"
         echo "Presione Ctrl+C para cancelar el reinicio."
@@ -155,10 +155,10 @@ server {
     server_name ${DOMINIO} *.${DOMINIO};
     root ${ROOT};
     index index.php index.html index.htm;
-    
+
     access_log /var/log/nginx/${DOMINIO}-access.log;
     error_log /var/log/nginx/${DOMINIO}-error.log;
-    
+
     location / {
         try_files \$uri \$uri/ /index.php?\$query_string;
     }
@@ -352,7 +352,7 @@ modulo_db_mariadb_instalar() {
     if [ "$confirmar" == "yes" ]; then
         check_root
         ROCKY_VERSION=$(rpm -E %rhel)
-        
+
         echo "[1/8] Detectando última versión estable desde la API de MariaDB..."
         MDB_V=$(curl -sS https://downloads.mariadb.org/rest-api/mariadb/ | jq -r '.major_releases[] | select(.release_status=="Stable") | .release_id' | sort -V | tail -n 1)
         if [[ -z "$MDB_V" ]]; then
@@ -360,7 +360,7 @@ modulo_db_mariadb_instalar() {
             exit 1
         fi
         echo " ✓ Última estable detectada: $MDB_V"
-        
+
         echo "[2/8] Configurando repositorio oficial e instalando MariaDB $MDB_V..."
         cat > /etc/yum.repos.d/mariadb.repo <<EOF
 [mariadb]
@@ -408,7 +408,7 @@ EOF
 
         echo "[7/8] Tareas finales..."
         proceso_finalizado
-        
+
         echo "Versión: MariaDB $MDB_V"
         echo ""
         echo "🛡️ Usuario Local (Bloqueado remotamente): root"
@@ -496,7 +496,7 @@ modulo_db_postgres_instalar() {
 
         sed -i "s/^[#]*\s*listen_addresses\s*=.*/listen_addresses = '*'/" "$PG_CONF"
         sed -i "s/^[#]*\s*password_encryption\s*=.*/password_encryption = scram-sha-256/" "$PG_CONF"
-        
+
         sed -i '/0\.0\.0\.0\/0/d' "$PG_HBA"
         echo "host    all             postgres        0.0.0.0/0               reject" >> "$PG_HBA"
         echo "host    all             all             0.0.0.0/0               scram-sha-256" >> "$PG_HBA"
@@ -525,7 +525,7 @@ EOF
 
         echo "[7/8] Tareas finales..."
         proceso_finalizado
-        
+
         echo "Versión: PostgreSQL $PG_V"
         echo ""
         echo "🛡️ Usuario Local (Bloqueado remotamente): postgres"
@@ -588,10 +588,10 @@ menu_web_nginx() {
         echo
         echo -e "${CY} v)${CL} Volver"
         echo -e "${AZ}==================================================${CL}"
-        
+
         read -n 1 -p "Seleccione una opción: " opc
         echo
-        
+
         case $opc in
             1) modulo_web_nginx_instalar ;;
             2) modulo_web_nginx_vhost ;;
@@ -614,10 +614,10 @@ menu_web_apache() {
         echo
         echo -e "${CY} v)${CL} Volver"
         echo -e "${AZ}==================================================${CL}"
-        
+
         read -n 1 -p "Seleccione una opción: " opc
         echo
-        
+
         case $opc in
             1) modulo_web_apache_instalar ;;
             2) modulo_web_apache_vhost ;;
@@ -639,10 +639,10 @@ menu_web() {
         echo
         echo -e "${CY} v)${CL} Volver al menú principal"
         echo -e "${AZ}==================================================${CL}"
-        
+
         read -n 1 -p "Seleccione una opción: " opc
         echo
-        
+
         case $opc in
             1) menu_web_nginx ;;
             2) menu_web_apache ;;
@@ -663,10 +663,10 @@ menu_db_mariadb() {
         echo
         echo -e "${CY} v)${CL} Volver"
         echo -e "${AZ}==================================================${CL}"
-        
+
         read -n 1 -p "Seleccione una opción: " opc
         echo
-        
+
         case $opc in
             1) modulo_db_mariadb_instalar ;;
             x|X) modulo_db_mariadb_desinstalar ;;
@@ -687,10 +687,10 @@ menu_db_postgres() {
         echo
         echo -e "${CY} v)${CL} Volver"
         echo -e "${AZ}==================================================${CL}"
-        
+
         read -n 1 -p "Seleccione una opción: " opc
         echo
-        
+
         case $opc in
             1) modulo_db_postgres_instalar ;;
             x|X) modulo_db_postgres_desinstalar ;;
@@ -711,10 +711,10 @@ menu_db() {
         echo
         echo -e "${CY} v)${CL} Volver al menú principal"
         echo -e "${AZ}==================================================${CL}"
-        
+
         read -n 1 -p "Seleccione una opción: " opc
         echo
-        
+
         case $opc in
             1) menu_db_mariadb ;;
             2) menu_db_postgres ;;
@@ -738,7 +738,7 @@ instalar_php() {
         read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
         return
     fi
-    
+
     echo -e "${AZ}======================================================${CL}"
     echo -e "${VE}   ➤ Instalar PHP ${PHP_V}${CL}"
     echo -e "${AZ}======================================================${CL}"
@@ -747,16 +747,16 @@ instalar_php() {
     if [ "$confirmar" == "yes" ]; then
         check_root
         ROCKY_VERSION=$(rpm -E %rhel)
-        
+
         echo "[1/4] Preparando repositorios REMI y CRB..."
         dnf config-manager --set-enabled crb > /dev/null 2>&1 || dnf config-manager --set-enabled powertools > /dev/null 2>&1 || true
         dnf install -y https://rpms.remirepo.net/enterprise/remi-release-${ROCKY_VERSION}.rpm > /dev/null 2>&1 || true
-        
+
         echo "[2/4] Instalando PHP ${PHP_V} y extensiones..."
         dnf -y module reset php > /dev/null 2>&1 || true
         dnf -y module install php:remi-${PHP_V} > /dev/null 2>&1
         dnf -y install php-fpm php-cli php-mysqlnd php-gd php-curl php-zip php-mbstring php-xml php-intl > /dev/null 2>&1
-        
+
         echo "[3/4] Configurando PHP-FPM..."
         if nginx -v &> /dev/null; then
             echo "      > Detectado Nginx: Ajustando /etc/php-fpm.d/www.conf"
@@ -766,17 +766,17 @@ instalar_php() {
             sed -i 's/^\s*;\?\s*listen\.group\s*=.*/listen.group = nginx/' /etc/php-fpm.d/www.conf
             sed -i 's/^\s*;\?\s*listen\.mode\s*=.*/listen.mode = 0660/' /etc/php-fpm.d/www.conf
         fi
-        
+
         echo "[4/4] Reiniciando servicios web y PHP-FPM..."
         systemctl enable --now php-fpm > /dev/null 2>&1
         systemctl restart php-fpm > /dev/null 2>&1
-        
+
         if nginx -v &> /dev/null; then systemctl restart nginx > /dev/null 2>&1; fi
         if httpd -v &> /dev/null; then systemctl restart httpd > /dev/null 2>&1; fi
-        
+
         # Crear archivo de prueba
         echo "<?php phpinfo(); ?>" > /var/www/html/info.php 2>/dev/null || true
-        
+
         proceso_finalizado
         read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
     else
@@ -831,10 +831,10 @@ menu_php() {
         echo
         echo -e "${CY} v)${CL} Volver al menú principal"
         echo -e "${AZ}==================================================${CL}"
-        
+
         read -n 1 -p "Seleccione una opción: " opc
         echo
-        
+
         case $opc in
             1) instalar_php "7.4" ;;
             2) instalar_php "8.0" ;;
@@ -860,7 +860,7 @@ modulo_redes_con_ruta() {
     echo -e "${AZ}======================================================${CL}"
     echo -e "${VE}   ➤ Configurar red con ruta (PBR)${CL}"
     echo -e "${AZ}======================================================${CL}"
-    
+
     read -p "Nombre del dispositivo (ej. ens224): " DEVICE
     read -p "Dirección IP (ej. 10.31.196.49): " IP
     read -p "Máscara/Prefijo (ej. 25): " PREFIX
@@ -908,7 +908,7 @@ modulo_redes_sin_ruta() {
     echo -e "${AZ}======================================================${CL}"
     echo -e "${VE}   ➤ Configurar red sin ruta (Red Local)${CL}"
     echo -e "${AZ}======================================================${CL}"
-    
+
     read -p "Nombre del dispositivo (ej. ens224): " DEVICE
     read -p "Dirección IP (ej. 192.168.1.10): " IP
     read -p "Máscara/Prefijo (ej. 24): " PREFIX
@@ -947,7 +947,7 @@ modulo_redes_eliminar() {
     echo -e "${AZ}======================================================${CL}"
     echo -e "${RO}   ➤ Eliminar una interfaz de red${CL}"
     echo -e "${AZ}======================================================${CL}"
-    
+
     read -p "Nombre del dispositivo a eliminar (ej. ens224): " DEVICE
 
     if [[ -z "$DEVICE" ]]; then
@@ -982,10 +982,10 @@ menu_redes() {
         echo
         echo -e "${CY} v)${CL} Volver al menú principal"
         echo -e "${AZ}==================================================${CL}"
-        
+
         read -n 1 -p "Seleccione una opción: " opc
         echo
-        
+
         case $opc in
             1) modulo_redes_con_ruta ;;
             2) modulo_redes_sin_ruta ;;
@@ -1006,7 +1006,7 @@ modulo_lvm_nuevo_disco() {
     echo -e "${AZ}======================================================${CL}"
     echo -e "${VE}   ➤ Añadir disco nuevo a LVM${CL}"
     echo -e "${AZ}======================================================${CL}"
-    
+
     read -p "Introduce el nuevo disco (ej. /dev/sdc): " NUEVO_DISCO
     read -p "Introduce la ruta a extender (ej. /home): " RUTA
 
@@ -1052,7 +1052,7 @@ modulo_lvm_nuevo_disco() {
         vgextend "$VG_NAME" "$NUEVO_DISCO" > /dev/null
         echo "Extendiendo Logical Volume y File System..."
         lvextend -l +100%FREE "$LV_PATH" -r > /dev/null
-        
+
         echo -e "\n${VE}Estado final:${CL}"
         df -h "$RUTA" | awk 'NR==2{print "  Tamaño: "$2" | Usado: "$3" | Disp: "$4" ("$5")"}'
         proceso_finalizado
@@ -1067,7 +1067,7 @@ modulo_lvm_extender_existente() {
     echo -e "${AZ}======================================================${CL}"
     echo -e "${VE}   ➤ Extender un disco existente en LVM${CL}"
     echo -e "${AZ}======================================================${CL}"
-    
+
     read -p "Físico ampliado (ej. /dev/sda2 o /dev/sdb): " PV_DISK
     read -p "Ruta a extender (ej. / o /home): " RUTA
 
@@ -1094,7 +1094,7 @@ modulo_lvm_extender_existente() {
             PART_NUM=$(echo "$PV_DISK" | grep -oE '[0-9]+$')
             echo "Solicitando rescan al Kernel e inyectando espacio a la partición..."
             echo 1 > "/sys/class/block/${PKNAME}/device/rescan" 2>/dev/null || true
-            
+
             if command -v parted &> /dev/null; then
                 parted -s -a opt "$PARENT_DISK" "resizepart" "$PART_NUM" "100%" > /dev/null 2>&1 || true
             elif command -v growpart &> /dev/null; then
@@ -1122,7 +1122,7 @@ modulo_lvm_extender_existente() {
 
         echo "Extendiendo Logical Volume y File System en cascada..."
         lvextend -l +100%FREE "$LV_PATH" -r > /dev/null
-        
+
         echo -e "\n${VE}Estado final:${CL}"
         df -h "$RUTA" | awk 'NR==2{print "  Tamaño: "$2" | Usado: "$3" | Disp: "$4" ("$5")"}'
         proceso_finalizado
@@ -1143,10 +1143,10 @@ menu_lvm() {
         echo
         echo -e "${CY} v)${CL} Volver al menú principal"
         echo -e "${AZ}==================================================${CL}"
-        
+
         read -n 1 -p "Seleccione una opción: " opc
         echo
-        
+
         case $opc in
             1) modulo_lvm_nuevo_disco ;;
             2) modulo_lvm_extender_existente ;;
@@ -1171,19 +1171,19 @@ menu_principal() {
         echo -e "${AZ}╚═════╝    ╚═╝    ╚═════╝ ╚═════╝ ╚═════╝ ╚═════╝ ${CL}"
         echo -e "${BL}          ROCKY LINUX AUTOMATION SUITE${CL}"
         echo -e "${AZ}==================================================${CL}"
-        echo -e "${CY} 1)${CL} 🛠️  Configuraciones Iniciales del S.O (Server Base)"
-        echo -e "${CY} 2)${CL} 🗄️  Bases de Datos (MariaDB / PostgreSQL)"
-        echo -e "${CY} 3)${CL} 🌐  Servidores Web (Nginx / Apache)"
-        echo -e "${CY} 4)${CL} 🐘  Gestor de PHP (Multi-versión)"
-        echo -e "${CY} 5)${CL} 🔌  Gestor de Redes (Interfaces / PBR)"
-        echo -e "${CY} 6)${CL} 💾  Gestor de Almacenamiento (LVM)"
+        echo -e "${CY} 1)${CL} 🛠️ Configuraciones Iniciales del S.O (Server Base)"
+        echo -e "${CY} 2)${CL} 🗄️ Bases de Datos (MariaDB / PostgreSQL)"
+        echo -e "${CY} 3)${CL} 🌐 Servidores Web (Nginx / Apache)"
+        echo -e "${CY} 4)${CL} 🐘 Gestor de PHP (Multi-versión)"
+        echo -e "${CY} 5)${CL} 🔌 Gestor de Redes (Interfaces / PBR)"
+        echo -e "${CY} 6)${CL} 💾 Gestor de Almacenamiento (LVM)"
         echo
         echo -e "${RO} s)${CL} Salir del Asistente"
         echo -e "${AZ}==================================================${CL}"
-        
+
         read -n 1 -p "Seleccione una opción: " opc
         echo
-        
+
         case $opc in
             1) modulo_server ;;
             2) menu_db ;;
