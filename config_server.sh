@@ -25,21 +25,21 @@ check_root() {
 }
 
 proceso_finalizado() {
-	echo
-	echo -e "${AM}Proceso culminado satifactoriamente !!!.${CL}"
-	echo
+    echo
+    echo -e "${AM}Proceso culminado satisfactoriamente !!!.${CL}"
+    echo
 }
 
-proceso_cancelado(){
-	echo
-	echo -e "${AM}Proceso cancelado !!!${CL}"
-	echo
-	read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+proceso_cancelado() {
+    echo
+    echo -e "${AM}Proceso cancelado !!!${CL}"
+    echo
+    read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
 }
 
-opcion_invalida(){
-	echo -e -n "${RO}* Opción inválida.${CL} Por favor, seleccione una opción válida."
-	sleep 1
+opcion_invalida() {
+    echo -e -n "${RO}* Opción inválida.${CL} Por favor, seleccione una opción válida."
+    sleep 1
 }
 
 # ==============================================================================
@@ -881,7 +881,11 @@ modulo_redes_con_ruta() {
         nmcli con delete "$DEVICE" > /dev/null 2>&1 || true
 
         echo "Creando nueva conexión..."
-        nmcli con add con-name "$DEVICE" type ethernet ifname "$DEVICE"             ipv4.method manual             ipv4.addresses "${IP}/${PREFIX}"             ipv4.never-default yes             ipv6.method disabled > /dev/null
+        nmcli con add con-name "$DEVICE" type ethernet ifname "$DEVICE" \
+            ipv4.method manual \
+            ipv4.addresses "${IP}/${PREFIX}" \
+            ipv4.never-default yes \
+            ipv6.method disabled > /dev/null
 
         echo "Configurando enrutamiento y Policy Based Routing (PBR)..."
         nmcli con mod "$DEVICE" ipv4.gateway "$GW"
@@ -923,7 +927,11 @@ modulo_redes_sin_ruta() {
         nmcli con delete "$DEVICE" > /dev/null 2>&1 || true
 
         echo "Creando nueva conexión (sin Gateway)..."
-        nmcli con add con-name "$DEVICE" type ethernet ifname "$DEVICE"             ipv4.method manual             ipv4.addresses "${IP}/${PREFIX}"             ipv4.never-default yes             ipv6.method disabled > /dev/null
+        nmcli con add con-name "$DEVICE" type ethernet ifname "$DEVICE" \
+            ipv4.method manual \
+            ipv4.addresses "${IP}/${PREFIX}" \
+            ipv4.never-default yes \
+            ipv6.method disabled > /dev/null
 
         echo "Levantando interfaz de red..."
         nmcli con up "$DEVICE" > /dev/null
@@ -1045,8 +1053,7 @@ modulo_lvm_nuevo_disco() {
         echo "Extendiendo Logical Volume y File System..."
         lvextend -l +100%FREE "$LV_PATH" -r > /dev/null
         
-        echo -e "
-${VE}Estado final:${CL}"
+        echo -e "\n${VE}Estado final:${CL}"
         df -h "$RUTA" | awk 'NR==2{print "  Tamaño: "$2" | Usado: "$3" | Disp: "$4" ("$5")"}'
         proceso_finalizado
         read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
@@ -1116,8 +1123,7 @@ modulo_lvm_extender_existente() {
         echo "Extendiendo Logical Volume y File System en cascada..."
         lvextend -l +100%FREE "$LV_PATH" -r > /dev/null
         
-        echo -e "
-${VE}Estado final:${CL}"
+        echo -e "\n${VE}Estado final:${CL}"
         df -h "$RUTA" | awk 'NR==2{print "  Tamaño: "$2" | Usado: "$3" | Disp: "$4" ("$5")"}'
         proceso_finalizado
         read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
@@ -1153,9 +1159,6 @@ menu_lvm() {
 # ==============================================================================
 # MENÚ PRINCIPAL
 # ==============================================================================
-
-
-
 
 menu_principal() {
     while true; do
