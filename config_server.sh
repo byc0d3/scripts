@@ -17,6 +17,10 @@ CL="\e[0m"
 # ==============================================================================
 # FUNCIONES AUXILIARES
 # ==============================================================================
+# ------------------------------------------------------------------------------
+# Función: check_root
+# Descripción: Verifica que el script se esté ejecutando con privilegios de superusuario (root).
+# ------------------------------------------------------------------------------
 check_root() {
     if [[ $EUID -ne 0 ]]; then
         echo -e "${RO}❌ Este script debe ejecutarse como root.${CL}" >&2
@@ -24,12 +28,20 @@ check_root() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: proceso_finalizado
+# Descripción: Muestra un mensaje de éxito estandarizado al finalizar una tarea.
+# ------------------------------------------------------------------------------
 proceso_finalizado() {
     echo
     echo -e "${AM}Proceso culminado satisfactoriamente !!!.${CL}"
     echo
 }
 
+# ------------------------------------------------------------------------------
+# Función: proceso_cancelado
+# Descripción: Muestra un mensaje de cancelación y pausa la ejecución hasta que el usuario presione una tecla.
+# ------------------------------------------------------------------------------
 proceso_cancelado() {
     echo
     echo -e "${AM}Proceso cancelado !!!${CL}"
@@ -37,6 +49,10 @@ proceso_cancelado() {
     read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
 }
 
+# ------------------------------------------------------------------------------
+# Función: opcion_invalida
+# Descripción: Muestra una advertencia cuando el usuario selecciona una opción no válida en los menús.
+# ------------------------------------------------------------------------------
 opcion_invalida() {
     echo -e -n "${RO}* Opción inválida.${CL} Por favor, seleccione una opción válida."
     sleep 1
@@ -46,6 +62,10 @@ opcion_invalida() {
 # MÓDULO 1: SERVER BASE
 # ==============================================================================
 
+# ------------------------------------------------------------------------------
+# Función: modulo_server
+# Descripción: Configura el sistema base: repositorios, hostname, hora, SELinux, firewall y tuning del sistema.
+# ------------------------------------------------------------------------------
 modulo_server() {
     clear
     echo -e "${AZ}======================================================${CL}"
@@ -145,6 +165,10 @@ EOF
 # MÓDULOS WEB (APACHE / NGINX)
 # ==============================================================================
 
+# ------------------------------------------------------------------------------
+# Función: virtualhost_nginx
+# Descripción: Genera la configuración del ServerBlock (VirtualHost) para Nginx.
+# ------------------------------------------------------------------------------
 virtualhost_nginx() {
     read -p "Ingrese el nombre del dominio, ejem: midominio.com: " DOMINIO
     read -p "Ingrese la ruta del proyecto, ejem: /var/www/miproyecto: " ROOT
@@ -166,6 +190,10 @@ server {
 EOF
 }
 
+# ------------------------------------------------------------------------------
+# Función: virtualhost_apache
+# Descripción: Genera la configuración del VirtualHost para Apache.
+# ------------------------------------------------------------------------------
 virtualhost_apache() {
     read -p "Ingrese el nombre del dominio, ejem: midominio.com: " DOMINIO
     read -p "Ingrese la ruta del proyecto, ejem: /var/www/miproyecto: " ROOT
@@ -185,6 +213,10 @@ virtualhost_apache() {
 EOF
 }
 
+# ------------------------------------------------------------------------------
+# Función: modulo_web_nginx_instalar
+# Descripción: Instala y habilita el servidor web Nginx.
+# ------------------------------------------------------------------------------
 modulo_web_nginx_instalar() {
     clear
     if nginx -v &> /dev/null; then
@@ -209,6 +241,10 @@ modulo_web_nginx_instalar() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: modulo_web_nginx_vhost
+# Descripción: Solicita datos al usuario y configura un nuevo ServerBlock en Nginx.
+# ------------------------------------------------------------------------------
 modulo_web_nginx_vhost() {
     clear
     if nginx -v &> /dev/null; then
@@ -233,6 +269,10 @@ modulo_web_nginx_vhost() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: modulo_web_nginx_desinstalar
+# Descripción: Detiene, elimina y limpia por completo la instalación de Nginx.
+# ------------------------------------------------------------------------------
 modulo_web_nginx_desinstalar() {
     clear
     if nginx -v &> /dev/null; then
@@ -258,6 +298,10 @@ modulo_web_nginx_desinstalar() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: modulo_web_apache_instalar
+# Descripción: Instala y habilita el servidor web Apache (httpd).
+# ------------------------------------------------------------------------------
 modulo_web_apache_instalar() {
     clear
     if httpd -v &> /dev/null; then
@@ -282,6 +326,10 @@ modulo_web_apache_instalar() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: modulo_web_apache_vhost
+# Descripción: Solicita datos al usuario y configura un nuevo VirtualHost en Apache.
+# ------------------------------------------------------------------------------
 modulo_web_apache_vhost() {
     clear
     if httpd -v &> /dev/null; then
@@ -306,6 +354,10 @@ modulo_web_apache_vhost() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: modulo_web_apache_desinstalar
+# Descripción: Detiene, elimina y limpia por completo la instalación de Apache.
+# ------------------------------------------------------------------------------
 modulo_web_apache_desinstalar() {
     clear
     if httpd -v &> /dev/null; then
@@ -335,6 +387,10 @@ modulo_web_apache_desinstalar() {
 # MÓDULOS DE BASES DE DATOS (MARIADB)
 # ==============================================================================
 
+# ------------------------------------------------------------------------------
+# Función: modulo_db_mariadb_instalar
+# Descripción: Instala, asegura y configura MariaDB. Genera y guarda contraseñas aleatorias.
+# ------------------------------------------------------------------------------
 modulo_db_mariadb_instalar() {
     clear
     if rpm -qa | grep -qiE "mariadb.*-server|mysql.*-server" || [ -d "/var/lib/mysql" ]; then
@@ -435,6 +491,10 @@ EOF_CREDS
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: modulo_db_mariadb_desinstalar
+# Descripción: Elimina MariaDB y todos sus datos residuales del sistema.
+# ------------------------------------------------------------------------------
 modulo_db_mariadb_desinstalar() {
     clear
     if rpm -qa | grep -qiE "mariadb.*-server|mysql.*-server" || [ -d "/var/lib/mysql" ]; then
@@ -471,6 +531,10 @@ modulo_db_mariadb_desinstalar() {
 # MÓDULOS DE BASES DE DATOS (POSTGRESQL)
 # ==============================================================================
 
+# ------------------------------------------------------------------------------
+# Función: modulo_db_postgres_instalar
+# Descripción: Instala, asegura y configura PostgreSQL. Genera y guarda contraseñas aleatorias.
+# ------------------------------------------------------------------------------
 modulo_db_postgres_instalar() {
     clear
     if rpm -qa | grep -q "postgresql.*-server" || [ -d "/var/lib/pgsql" ]; then
@@ -563,6 +627,10 @@ EOF_CREDS
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: modulo_db_postgres_desinstalar
+# Descripción: Elimina PostgreSQL y todos sus datos residuales del sistema.
+# ------------------------------------------------------------------------------
 modulo_db_postgres_desinstalar() {
     clear
     if rpm -qa | grep -q "postgresql.*-server" || [ -d "/var/lib/pgsql" ]; then
@@ -598,6 +666,10 @@ modulo_db_postgres_desinstalar() {
 # SUBMENÚS
 # ==============================================================================
 
+# ------------------------------------------------------------------------------
+# Función: menu_web_nginx
+# Descripción: Submenú interactivo para la gestión exclusiva de Nginx.
+# ------------------------------------------------------------------------------
 menu_web_nginx() {
     while true; do
         clear
@@ -624,6 +696,10 @@ menu_web_nginx() {
     done
 }
 
+# ------------------------------------------------------------------------------
+# Función: menu_web_apache
+# Descripción: Submenú interactivo para la gestión exclusiva de Apache.
+# ------------------------------------------------------------------------------
 menu_web_apache() {
     while true; do
         clear
@@ -650,6 +726,10 @@ menu_web_apache() {
     done
 }
 
+# ------------------------------------------------------------------------------
+# Función: menu_web
+# Descripción: Menú principal de servidores web para elegir entre Nginx y Apache.
+# ------------------------------------------------------------------------------
 menu_web() {
     while true; do
         clear
@@ -674,6 +754,10 @@ menu_web() {
     done
 }
 
+# ------------------------------------------------------------------------------
+# Función: menu_db_mariadb
+# Descripción: Submenú interactivo para gestionar MariaDB.
+# ------------------------------------------------------------------------------
 menu_db_mariadb() {
     while true; do
         clear
@@ -698,6 +782,10 @@ menu_db_mariadb() {
     done
 }
 
+# ------------------------------------------------------------------------------
+# Función: menu_db_postgres
+# Descripción: Submenú interactivo para gestionar PostgreSQL.
+# ------------------------------------------------------------------------------
 menu_db_postgres() {
     while true; do
         clear
@@ -722,6 +810,10 @@ menu_db_postgres() {
     done
 }
 
+# ------------------------------------------------------------------------------
+# Función: menu_db
+# Descripción: Menú principal de bases de datos para elegir entre MariaDB y PostgreSQL.
+# ------------------------------------------------------------------------------
 menu_db() {
     while true; do
         clear
@@ -751,6 +843,10 @@ menu_db() {
 # MÓDULOS DE PHP
 # ==============================================================================
 
+# ------------------------------------------------------------------------------
+# Función: instalar_php
+# Descripción: Instala una versión específica de PHP usando el repositorio REMI y lo integra con el servidor web activo.
+# ------------------------------------------------------------------------------
 instalar_php() {
     local PHP_V=$1
     clear
@@ -806,6 +902,10 @@ instalar_php() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: modulo_php_desinstalar
+# Descripción: Elimina por completo todas las instalaciones de PHP del sistema.
+# ------------------------------------------------------------------------------
 modulo_php_desinstalar() {
     clear
     if php -v &> /dev/null; then
@@ -835,6 +935,10 @@ modulo_php_desinstalar() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: menu_php
+# Descripción: Menú interactivo para instalar múltiples versiones de PHP o desinstalarlo.
+# ------------------------------------------------------------------------------
 menu_php() {
     while true; do
         clear
@@ -877,6 +981,10 @@ menu_php() {
 # MÓDULOS DE REDES
 # ==============================================================================
 
+# ------------------------------------------------------------------------------
+# Función: modulo_redes_con_ruta
+# Descripción: Configura una interfaz de red estática implementando enrutamiento basado en políticas (PBR).
+# ------------------------------------------------------------------------------
 modulo_redes_con_ruta() {
     clear
     echo -e "${AZ}======================================================${CL}"
@@ -925,6 +1033,10 @@ modulo_redes_con_ruta() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: modulo_redes_sin_ruta
+# Descripción: Configura una interfaz de red estática de área local, sin gateway (puerta de enlace).
+# ------------------------------------------------------------------------------
 modulo_redes_sin_ruta() {
     clear
     echo -e "${AZ}======================================================${CL}"
@@ -964,6 +1076,10 @@ modulo_redes_sin_ruta() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: modulo_redes_eliminar
+# Descripción: Elimina por completo una conexión de red existente usando nmcli.
+# ------------------------------------------------------------------------------
 modulo_redes_eliminar() {
     clear
     echo -e "${AZ}======================================================${CL}"
@@ -992,6 +1108,10 @@ modulo_redes_eliminar() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: menu_redes
+# Descripción: Menú interactivo para la gestión de interfaces de red y enrutamiento.
+# ------------------------------------------------------------------------------
 menu_redes() {
     while true; do
         clear
@@ -1023,6 +1143,10 @@ menu_redes() {
 # MÓDULOS DE ALMACENAMIENTO (LVM)
 # ==============================================================================
 
+# ------------------------------------------------------------------------------
+# Función: modulo_lvm_nuevo_disco
+# Descripción: Agrega un disco físico nuevo al sistema LVM y expande la ruta deseada.
+# ------------------------------------------------------------------------------
 modulo_lvm_nuevo_disco() {
     clear
     echo -e "${AZ}======================================================${CL}"
@@ -1084,6 +1208,10 @@ modulo_lvm_nuevo_disco() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: modulo_lvm_extender_existente
+# Descripción: Expande una partición LVM existente redimensionando el disco base, útil para redimensionamiento en caliente en la nube.
+# ------------------------------------------------------------------------------
 modulo_lvm_extender_existente() {
     clear
     echo -e "${AZ}======================================================${CL}"
@@ -1154,6 +1282,10 @@ modulo_lvm_extender_existente() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# Función: menu_lvm
+# Descripción: Menú interactivo para la gestión de discos, particiones y volúmenes lógicos (LVM).
+# ------------------------------------------------------------------------------
 menu_lvm() {
     while true; do
         clear
@@ -1182,6 +1314,10 @@ menu_lvm() {
 # MENÚ PRINCIPAL
 # ==============================================================================
 
+# ------------------------------------------------------------------------------
+# Función: menu_principal
+# Descripción: Punto de entrada principal. Despliega el menú maestro interactivo.
+# ------------------------------------------------------------------------------
 menu_principal() {
     while true; do
         clear
