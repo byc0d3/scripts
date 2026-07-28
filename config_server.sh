@@ -131,9 +131,11 @@ EOF
         proceso_finalizado
         
         echo "⚠️  SELinux está en modo permisivo. Si es producción, cambie a enforcing."
-        echo -e "${RO}🔄 Se recomienda reiniciar el sistema para aplicar todos los cambios de SELinux y Hostname.${CL}"
+        echo -e "${RO}🔄 El sistema se reiniciará en 10 segundos para aplicar los cambios de SELinux y Hostname.${CL}"
+        echo "Presione Ctrl+C para cancelar el reinicio."
         echo
-        read -n 1 -s -r -p "Presiona cualquier tecla para volver al menú principal..."
+        sleep 10
+        reboot
     else
         proceso_cancelado
     fi
