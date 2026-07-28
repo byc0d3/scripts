@@ -15,7 +15,7 @@ VE="\e[1;32m"  # Verde
 BL="\e[1;37m"  # Blanco
 CL="\e[0m"     # Limpiar
 
-BASE_URL="https://raw.githubusercontent.com/byc0d3/tools/main/scripts/bash"
+BASE_URL="https://raw.githubusercontent.com/byc0d3/scripts/refs/heads/main"
 
 # ==============================================================================
 # NÚCLEO DEL MENÚ (Motor de Ejecución)
