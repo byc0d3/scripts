@@ -3,5 +3,4 @@
 - Todos los scripts bash deben tener `set -eo pipefail`.
 - Siempre que se cree un archivo, se debe usar formato modular con funciones.
 - No me preguntes por confirmaciones para instalar herramientas CLI (jq, curl), hazlo directo.
-- Se debe asegurar soporte no-interactivo usando variables de entorno en los scripts.
 - Todos los scripts deben contar con un header de descripción y formato de pasos `[X/Y]`.

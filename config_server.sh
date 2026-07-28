@@ -451,7 +451,7 @@ EOF
         DB_PASS=$(openssl rand -base64 20 | tr -dc 'a-zA-Z0-9' | head -c 16)
         ADMIN_PASS=$(openssl rand -base64 20 | tr -dc 'a-zA-Z0-9' | head -c 16)
 
-        mysql -u root <<EOF
+        mariadb -u root <<EOF
 ALTER USER 'root'@'localhost' IDENTIFIED BY '$DB_PASS';
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
