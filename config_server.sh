@@ -420,7 +420,7 @@ EOF
         
         cat <<EOF_CREDS > /home/mariadb_credentials.txt
 ==================================================
-MariaDB Installation (\$(date))
+MariaDB Installation ($(date))
 Versión: $MDB_V
 Usuario Local: root | Password: $DB_PASS
 Usuario Remoto: admindb | Password: $ADMIN_PASS
@@ -548,9 +548,9 @@ EOF
         
         cat <<EOF_CREDS > /home/postgres_credentials.txt
 ==================================================
-MariaDB Installation (\$(date))
-Versión: $MDB_V
-Usuario Local: root | Password: $DB_PASS
+PostgreSQL Instalada ($(date))
+Versión: $PG_V
+Usuario Local: postgres | Password: $DB_PASS
 Usuario Remoto: admindb | Password: $ADMIN_PASS
 ==================================================
 EOF_CREDS
