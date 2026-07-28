@@ -122,6 +122,9 @@ cleanup() {
     echo "Estado final    :"
     df -h "$RUTA" | awk 'NR==2{print "  Tamaño: "$2" | Usado: "$3" | Disp: "$4" ("$5")"}'
     echo "--------------------------------------------------"
+    
+    echo "🗑️ Eliminando instalador..."
+    rm -f -- "$0" 2>/dev/null || true
 }
 
 main() {

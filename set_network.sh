@@ -123,6 +123,9 @@ apply_network() {
         echo "Gateway     : Ninguno (Red Local interna)"
     fi
     echo "--------------------------------------------------"
+    
+    echo "🗑️ Eliminando instalador..."
+    rm -f -- "$0" 2>/dev/null || true
 }
 
 main() {

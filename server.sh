@@ -160,6 +160,10 @@ main() {
     echo "⚠️  SELinux está en modo permisivo. Si es producción, cambie a enforcing."
     echo "🔄 El sistema se reiniciará en 10 segundos. Presione Ctrl+C para cancelar."
     echo "--------------------------------------------------"
+    
+    echo "🗑️ Eliminando instalador..."
+    rm -f -- "$0" 2>/dev/null || true
+    
     sleep 10
     reboot
 }
