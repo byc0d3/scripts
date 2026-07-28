@@ -418,7 +418,7 @@ EOF
         echo "🔑 Password: $ADMIN_PASS"
         echo "--------------------------------------------------"
         
-        cat <<EOF_CREDS >> /home/db_credentials.txt
+        cat <<EOF_CREDS > /home/mariadb_credentials.txt
 ==================================================
 MariaDB Installation (\$(date))
 Versión: $MDB_V
@@ -426,8 +426,8 @@ Usuario Local: root | Password: $DB_PASS
 Usuario Remoto: admindb | Password: $ADMIN_PASS
 ==================================================
 EOF_CREDS
-        chmod 600 /home/db_credentials.txt
-        echo -e "${VE}* Credenciales guardadas de forma segura en: /home/db_credentials.txt${CL}"
+        chmod 600 /home/mariadb_credentials.txt
+        echo -e "${VE}* Credenciales guardadas de forma segura en: /home/mariadb_credentials.txt${CL}"
         echo
         read -n 1 -s -r -p "Presiona cualquier tecla para volver al menú..."
     else
@@ -546,7 +546,7 @@ EOF
         echo "🔑 Password: $ADMIN_PASS"
         echo "--------------------------------------------------"
         
-        cat <<EOF_CREDS >> /home/db_credentials.txt
+        cat <<EOF_CREDS > /home/postgres_credentials.txt
 ==================================================
 MariaDB Installation (\$(date))
 Versión: $MDB_V
@@ -554,8 +554,8 @@ Usuario Local: root | Password: $DB_PASS
 Usuario Remoto: admindb | Password: $ADMIN_PASS
 ==================================================
 EOF_CREDS
-        chmod 600 /home/db_credentials.txt
-        echo -e "${VE}* Credenciales guardadas de forma segura en: /home/db_credentials.txt${CL}"
+        chmod 600 /home/postgres_credentials.txt
+        echo -e "${VE}* Credenciales guardadas de forma segura en: /home/postgres_credentials.txt${CL}"
         echo
         read -n 1 -s -r -p "Presiona cualquier tecla para volver al menú..."
     else
