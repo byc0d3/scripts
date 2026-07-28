@@ -724,9 +724,133 @@ menu_db() {
     done
 }
 
+
+# ==============================================================================
+# MÓDULOS DE PHP
+# ==============================================================================
+
+instalar_php() {
+    local PHP_V=$1
+    clear
+    if php -v &> /dev/null; then
+        php_version=$(php -v | awk '/^PHP/ {print $2}')
+        echo -e "${AM}Ya existe una instalación de PHP, en su versión ${php_version}.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+        return
+    fi
+    
+    echo -e "${AZ}======================================================${CL}"
+    echo -e "${VE}   ➤ Instalar PHP ${PHP_V}${CL}"
+    echo -e "${AZ}======================================================${CL}"
+    echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+    read confirmar
+    if [ "$confirmar" == "yes" ]; then
+        check_root
+        ROCKY_VERSION=$(rpm -E %rhel)
+        
+        echo "[1/4] Preparando repositorios REMI y CRB..."
+        dnf config-manager --set-enabled crb > /dev/null 2>&1 || dnf config-manager --set-enabled powertools > /dev/null 2>&1 || true
+        dnf install -y https://rpms.remirepo.net/enterprise/remi-release-${ROCKY_VERSION}.rpm > /dev/null 2>&1 || true
+        
+        echo "[2/4] Instalando PHP ${PHP_V} y extensiones..."
+        dnf -y module reset php > /dev/null 2>&1 || true
+        dnf -y module install php:remi-${PHP_V} > /dev/null 2>&1
+        dnf -y install php-fpm php-cli php-mysqlnd php-gd php-curl php-zip php-mbstring php-xml php-intl > /dev/null 2>&1
+        
+        echo "[3/4] Configurando PHP-FPM..."
+        if nginx -v &> /dev/null; then
+            echo "      > Detectado Nginx: Ajustando /etc/php-fpm.d/www.conf"
+            sed -i 's/^user = apache/user = nginx/' /etc/php-fpm.d/www.conf
+            sed -i 's/^group = apache/group = nginx/' /etc/php-fpm.d/www.conf
+        fi
+        
+        echo "[4/4] Reiniciando servicios web y PHP-FPM..."
+        systemctl enable --now php-fpm > /dev/null 2>&1
+        systemctl restart php-fpm > /dev/null 2>&1
+        
+        if nginx -v &> /dev/null; then systemctl restart nginx > /dev/null 2>&1; fi
+        if httpd -v &> /dev/null; then systemctl restart httpd > /dev/null 2>&1; fi
+        
+        # Crear archivo de prueba
+        echo "<?php phpinfo(); ?>" > /var/www/html/info.php 2>/dev/null || true
+        
+        proceso_finalizado
+        read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
+    else
+        proceso_cancelado
+    fi
+}
+
+modulo_php_desinstalar() {
+    clear
+    if php -v &> /dev/null; then
+        echo -e "${AZ}======================================================${CL}"
+        echo -e "${RO}   ➤ Desinstalar PHP${CL}"
+        echo -e "${AZ}======================================================${CL}"
+        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        read confirmar
+        if [ "$confirmar" == "yes" ]; then
+            check_root
+            echo "Deteniendo PHP-FPM..."
+            systemctl stop php-fpm > /dev/null 2>&1 || true
+            echo "Eliminando paquetes..."
+            dnf -y module reset php > /dev/null 2>&1 || true
+            dnf -y remove php* > /dev/null 2>&1 || true
+            dnf -y autoremove > /dev/null 2>&1
+            dnf -y clean all > /dev/null 2>&1
+            rm -f /var/www/html/info.php
+            proceso_finalizado
+            read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
+        else
+            proceso_cancelado
+        fi
+    else
+        echo -e "${RO}No existe una instalación de PHP en el sistema.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+    fi
+}
+
+menu_php() {
+    while true; do
+        clear
+        echo -e "${AZ}==================================================${CL}"
+        echo -e "${VE}   🐘  Gestor de PHP${CL}"
+        echo -e "${AZ}==================================================${CL}"
+        echo -e "${CY} 1)${CL} Instalar PHP 7.4"
+        echo -e "${CY} 2)${CL} Instalar PHP 8.0"
+        echo -e "${CY} 3)${CL} Instalar PHP 8.1"
+        echo -e "${CY} 4)${CL} Instalar PHP 8.2"
+        echo -e "${CY} 5)${CL} Instalar PHP 8.3"
+        echo -e "${CY} 6)${CL} Instalar PHP 8.4"
+        echo -e "${CY} 7)${CL} Instalar PHP 8.5"
+        echo
+        echo -e "${RO} x)${CL} Desinstalar PHP"
+        echo
+        echo -e "${CY} v)${CL} Volver al menú principal"
+        echo -e "${AZ}==================================================${CL}"
+        
+        read -n 1 -p "Seleccione una opción: " opc
+        echo
+        
+        case $opc in
+            1) instalar_php "7.4" ;;
+            2) instalar_php "8.0" ;;
+            3) instalar_php "8.1" ;;
+            4) instalar_php "8.2" ;;
+            5) instalar_php "8.3" ;;
+            6) instalar_php "8.4" ;;
+            7) instalar_php "8.5" ;;
+            x|X) modulo_php_desinstalar ;;
+            v|V) break ;;
+            *) opcion_invalida ;;
+        esac
+    done
+}
+
 # ==============================================================================
 # MENÚ PRINCIPAL
 # ==============================================================================
+
 
 menu_principal() {
     while true; do
@@ -742,6 +866,7 @@ menu_principal() {
         echo -e "${CY} 1)${CL} 🛠️  Configuraciones Iniciales del S.O (Server Base)"
         echo -e "${CY} 2)${CL} 🗄️  Bases de Datos (MariaDB / PostgreSQL)"
         echo -e "${CY} 3)${CL} 🌐  Servidores Web (Nginx / Apache)"
+        echo -e "${CY} 4)${CL} 🐘  Gestor de PHP (Multi-versión)"
         echo
         echo -e "${RO} s)${CL} Salir del Asistente"
         echo -e "${AZ}==================================================${CL}"
@@ -753,6 +878,7 @@ menu_principal() {
             1) modulo_server ;;
             2) menu_db ;;
             3) menu_web ;;
+            4) menu_php ;;
             s|S)
                 echo -e "\n${VE}¡Hasta pronto!${CL}"
                 exit 0
