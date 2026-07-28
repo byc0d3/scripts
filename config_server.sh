@@ -850,9 +850,148 @@ menu_php() {
     done
 }
 
+
+# ==============================================================================
+# MÓDULOS DE REDES
+# ==============================================================================
+
+modulo_redes_con_ruta() {
+    clear
+    echo -e "${AZ}======================================================${CL}"
+    echo -e "${VE}   ➤ Configurar red con ruta (PBR)${CL}"
+    echo -e "${AZ}======================================================${CL}"
+    
+    read -p "Nombre del dispositivo (ej. ens224): " DEVICE
+    read -p "Dirección IP (ej. 10.31.196.49): " IP
+    read -p "Máscara/Prefijo (ej. 25): " PREFIX
+    read -p "Gateway (ej. 10.31.196.1): " GW
+    TABLE=5000
+
+    if [[ -z "$DEVICE" || -z "$IP" || -z "$PREFIX" || -z "$GW" ]]; then
+        echo -e "${RO}❌ Error: Dispositivo, IP, Prefijo y Gateway son obligatorios.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+        return
+    fi
+
+    echo -n "¿Deseas aplicar esta configuración? Escribe yes para continuar: "
+    read confirmar
+    if [ "$confirmar" == "yes" ]; then
+        check_root
+        echo "Eliminando perfil anterior..."
+        nmcli con delete "$DEVICE" > /dev/null 2>&1 || true
+
+        echo "Creando nueva conexión..."
+        nmcli con add con-name "$DEVICE" type ethernet ifname "$DEVICE"             ipv4.method manual             ipv4.addresses "${IP}/${PREFIX}"             ipv4.never-default yes             ipv6.method disabled > /dev/null
+
+        echo "Configurando enrutamiento y Policy Based Routing (PBR)..."
+        nmcli con mod "$DEVICE" ipv4.gateway "$GW"
+        nmcli con mod "$DEVICE" ipv4.route-table "$TABLE"
+        nmcli con mod "$DEVICE" ipv4.routing-rules ""
+        nmcli con mod "$DEVICE" +ipv4.routing-rules "priority 5 iif ${DEVICE} table ${TABLE}"
+        nmcli con mod "$DEVICE" +ipv4.routing-rules "priority 5 from ${IP} table ${TABLE}"
+
+        echo "Levantando interfaz de red..."
+        nmcli con up "$DEVICE" > /dev/null
+        proceso_finalizado
+        read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
+    else
+        proceso_cancelado
+    fi
+}
+
+modulo_redes_sin_ruta() {
+    clear
+    echo -e "${AZ}======================================================${CL}"
+    echo -e "${VE}   ➤ Configurar red sin ruta (Red Local)${CL}"
+    echo -e "${AZ}======================================================${CL}"
+    
+    read -p "Nombre del dispositivo (ej. ens224): " DEVICE
+    read -p "Dirección IP (ej. 192.168.1.10): " IP
+    read -p "Máscara/Prefijo (ej. 24): " PREFIX
+
+    if [[ -z "$DEVICE" || -z "$IP" || -z "$PREFIX" ]]; then
+        echo -e "${RO}❌ Error: Dispositivo, IP y Prefijo son obligatorios.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+        return
+    fi
+
+    echo -n "¿Deseas aplicar esta configuración? Escribe yes para continuar: "
+    read confirmar
+    if [ "$confirmar" == "yes" ]; then
+        check_root
+        echo "Eliminando perfil anterior..."
+        nmcli con delete "$DEVICE" > /dev/null 2>&1 || true
+
+        echo "Creando nueva conexión (sin Gateway)..."
+        nmcli con add con-name "$DEVICE" type ethernet ifname "$DEVICE"             ipv4.method manual             ipv4.addresses "${IP}/${PREFIX}"             ipv4.never-default yes             ipv6.method disabled > /dev/null
+
+        echo "Levantando interfaz de red..."
+        nmcli con up "$DEVICE" > /dev/null
+        proceso_finalizado
+        read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
+    else
+        proceso_cancelado
+    fi
+}
+
+modulo_redes_eliminar() {
+    clear
+    echo -e "${AZ}======================================================${CL}"
+    echo -e "${RO}   ➤ Eliminar una interfaz de red${CL}"
+    echo -e "${AZ}======================================================${CL}"
+    
+    read -p "Nombre del dispositivo a eliminar (ej. ens224): " DEVICE
+
+    if [[ -z "$DEVICE" ]]; then
+        echo -e "${RO}❌ Error: El nombre del dispositivo es obligatorio.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+        return
+    fi
+
+    echo -e "⚠️  ATENCIÓN: Se eliminará la conexión '$DEVICE'."
+    echo -n "¿Deseas continuar? Escribe yes para confirmar: "
+    read confirmar
+    if [ "$confirmar" == "yes" ]; then
+        check_root
+        echo "Eliminando conexión de red..."
+        nmcli con delete "$DEVICE" > /dev/null 2>&1 || true
+        proceso_finalizado
+        read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
+    else
+        proceso_cancelado
+    fi
+}
+
+menu_redes() {
+    while true; do
+        clear
+        echo -e "${AZ}==================================================${CL}"
+        echo -e "${VE}   🔌  Gestor de Redes e Interfaces${CL}"
+        echo -e "${AZ}==================================================${CL}"
+        echo -e "${CY} 1)${CL} Configurar red con ruta (PBR)"
+        echo -e "${CY} 2)${CL} Configurar red sin ruta (Local)"
+        echo -e "${RO} x)${CL} Eliminar una interfaz"
+        echo
+        echo -e "${CY} v)${CL} Volver al menú principal"
+        echo -e "${AZ}==================================================${CL}"
+        
+        read -n 1 -p "Seleccione una opción: " opc
+        echo
+        
+        case $opc in
+            1) modulo_redes_con_ruta ;;
+            2) modulo_redes_sin_ruta ;;
+            x|X) modulo_redes_eliminar ;;
+            v|V) break ;;
+            *) opcion_invalida ;;
+        esac
+    done
+}
+
 # ==============================================================================
 # MENÚ PRINCIPAL
 # ==============================================================================
+
 
 
 menu_principal() {
@@ -870,6 +1009,7 @@ menu_principal() {
         echo -e "${CY} 2)${CL} 🗄️  Bases de Datos (MariaDB / PostgreSQL)"
         echo -e "${CY} 3)${CL} 🌐  Servidores Web (Nginx / Apache)"
         echo -e "${CY} 4)${CL} 🐘  Gestor de PHP (Multi-versión)"
+        echo -e "${CY} 5)${CL} 🔌  Gestor de Redes (Interfaces / PBR)"
         echo
         echo -e "${RO} s)${CL} Salir del Asistente"
         echo -e "${AZ}==================================================${CL}"
@@ -882,6 +1022,7 @@ menu_principal() {
             2) menu_db ;;
             3) menu_web ;;
             4) menu_php ;;
+            5) menu_redes ;;
             s|S)
                 echo -e "\n${VE}¡Hasta pronto!${CL}"
                 exit 0
