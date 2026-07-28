@@ -760,8 +760,11 @@ instalar_php() {
         echo "[3/4] Configurando PHP-FPM..."
         if nginx -v &> /dev/null; then
             echo "      > Detectado Nginx: Ajustando /etc/php-fpm.d/www.conf"
-            sed -i 's/^user = apache/user = nginx/' /etc/php-fpm.d/www.conf
-            sed -i 's/^group = apache/group = nginx/' /etc/php-fpm.d/www.conf
+            sed -i 's/^\s*user\s*=\s*.*/user = nginx/' /etc/php-fpm.d/www.conf
+            sed -i 's/^\s*group\s*=\s*.*/group = nginx/' /etc/php-fpm.d/www.conf
+            sed -i 's/^\s*;\?\s*listen\.owner\s*=.*/listen.owner = nginx/' /etc/php-fpm.d/www.conf
+            sed -i 's/^\s*;\?\s*listen\.group\s*=.*/listen.group = nginx/' /etc/php-fpm.d/www.conf
+            sed -i 's/^\s*;\?\s*listen\.mode\s*=.*/listen.mode = 0660/' /etc/php-fpm.d/www.conf
         fi
         
         echo "[4/4] Reiniciando servicios web y PHP-FPM..."
