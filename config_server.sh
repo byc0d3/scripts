@@ -142,6 +142,196 @@ EOF
 }
 
 # ==============================================================================
+# MÓDULOS WEB (APACHE / NGINX)
+# ==============================================================================
+
+virtualhost_nginx() {
+    read -p "Ingrese el nombre del dominio, ejem: midominio.com: " DOMINIO
+    read -p "Ingrese la ruta del proyecto, ejem: /var/www/miproyecto: " ROOT
+    CONF_FILE="/etc/nginx/conf.d/${DOMINIO}.conf"
+    cat << EOF > "$CONF_FILE"
+server {
+    listen 80;
+    server_name ${DOMINIO} *.${DOMINIO};
+    root ${ROOT};
+    index index.php index.html index.htm;
+    
+    access_log /var/log/nginx/${DOMINIO}-access.log;
+    error_log /var/log/nginx/${DOMINIO}-error.log;
+    
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+}
+EOF
+}
+
+virtualhost_apache() {
+    read -p "Ingrese el nombre del dominio, ejem: midominio.com: " DOMINIO
+    read -p "Ingrese la ruta del proyecto, ejem: /var/www/miproyecto: " ROOT
+    CONF_FILE="/etc/httpd/conf.d/${DOMINIO}.conf"
+    cat << EOF > "$CONF_FILE"
+<VirtualHost *:80>
+    DocumentRoot "${ROOT}"
+    ServerName ${DOMINIO}
+    ServerAlias *.${DOMINIO}
+    ErrorLog /var/log/httpd/${DOMINIO}-error_log
+    CustomLog /var/log/httpd/${DOMINIO}-access_log combined
+    <Directory "${ROOT}">
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+EOF
+}
+
+modulo_web_nginx_instalar() {
+    clear
+    if nginx -v &> /dev/null; then
+        echo -e "${AM}Ya existe una instalación de Nginx.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+    else
+        echo -e "${AZ}======================================================${CL}"
+        echo -e "${VE}   ➤ Instalar Nginx${CL}"
+        echo -e "${AZ}======================================================${CL}"
+        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        read confirmar
+        if [ "$confirmar" == "yes" ]; then
+            check_root
+            dnf -y --assumeyes install nginx > /dev/null
+            systemctl enable nginx --now > /dev/null
+            systemctl start nginx > /dev/null
+            proceso_finalizado
+            read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
+        else
+            proceso_cancelado
+        fi
+    fi
+}
+
+modulo_web_nginx_vhost() {
+    clear
+    if nginx -v &> /dev/null; then
+        echo -e "${AZ}======================================================${CL}"
+        echo -e "${VE}   ➤ Configurar ServerBlock Nginx${CL}"
+        echo -e "${AZ}======================================================${CL}"
+        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        read confirmar
+        if [ "$confirmar" == "yes" ]; then
+            check_root
+            virtualhost_nginx
+            systemctl restart nginx
+            echo -e "\n${VE}ServerBlock creado para el dominio con éxito !!!.${CL}"
+            proceso_finalizado
+            read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
+        else
+            proceso_cancelado
+        fi
+    else
+        echo -e "${RO}No existe una instalación de Nginx en el sistema.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+    fi
+}
+
+modulo_web_nginx_desinstalar() {
+    clear
+    if nginx -v &> /dev/null; then
+        echo -e "${AZ}======================================================${CL}"
+        echo -e "${RO}   ➤ Desinstalar Nginx${CL}"
+        echo -e "${AZ}======================================================${CL}"
+        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        read confirmar
+        if [ "$confirmar" == "yes" ]; then
+            check_root
+            systemctl stop nginx || true
+            dnf -y remove nginx > /dev/null
+            dnf -y autoremove > /dev/null
+            dnf -y clean all > /dev/null
+            proceso_finalizado
+            read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
+        else
+            proceso_cancelado
+        fi
+    else
+        echo -e "${RO}No existe una instalación de Nginx en el sistema.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+    fi
+}
+
+modulo_web_apache_instalar() {
+    clear
+    if httpd -v &> /dev/null; then
+        echo -e "${AM}Ya existe una instalación de Apache.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+    else
+        echo -e "${AZ}======================================================${CL}"
+        echo -e "${VE}   ➤ Instalar Apache${CL}"
+        echo -e "${AZ}======================================================${CL}"
+        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        read confirmar
+        if [ "$confirmar" == "yes" ]; then
+            check_root
+            dnf -y --assumeyes install httpd > /dev/null
+            systemctl enable httpd --now > /dev/null
+            systemctl start httpd > /dev/null
+            proceso_finalizado
+            read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
+        else
+            proceso_cancelado
+        fi
+    fi
+}
+
+modulo_web_apache_vhost() {
+    clear
+    if httpd -v &> /dev/null; then
+        echo -e "${AZ}======================================================${CL}"
+        echo -e "${VE}   ➤ Configurar VirtualHost Apache${CL}"
+        echo -e "${AZ}======================================================${CL}"
+        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        read confirmar
+        if [ "$confirmar" == "yes" ]; then
+            check_root
+            virtualhost_apache
+            systemctl restart httpd
+            echo -e "\n${VE}VirtualHost creado para el dominio con éxito !!!.${CL}"
+            proceso_finalizado
+            read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
+        else
+            proceso_cancelado
+        fi
+    else
+        echo -e "${RO}No existe una instalación de Apache en el sistema.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+    fi
+}
+
+modulo_web_apache_desinstalar() {
+    clear
+    if httpd -v &> /dev/null; then
+        echo -e "${AZ}======================================================${CL}"
+        echo -e "${RO}   ➤ Desinstalar Apache${CL}"
+        echo -e "${AZ}======================================================${CL}"
+        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        read confirmar
+        if [ "$confirmar" == "yes" ]; then
+            check_root
+            systemctl stop httpd || true
+            dnf -y remove httpd > /dev/null
+            dnf -y autoremove > /dev/null
+            dnf -y clean all > /dev/null
+            proceso_finalizado
+            read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
+        else
+            proceso_cancelado
+        fi
+    else
+        echo -e "${RO}No existe una instalación de Apache en el sistema.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+    fi
+}
+
+# ==============================================================================
 # MÓDULOS DE BASES DE DATOS (MARIADB)
 # ==============================================================================
 
@@ -386,6 +576,82 @@ modulo_db_postgres_desinstalar() {
 # SUBMENÚS
 # ==============================================================================
 
+menu_web_nginx() {
+    while true; do
+        clear
+        echo -e "${AZ}==================================================${CL}"
+        echo -e "${VE}   🌐  Servidor Web: Nginx${CL}"
+        echo -e "${AZ}==================================================${CL}"
+        echo -e "${CY} 1)${CL} Instalar Nginx"
+        echo -e "${CY} 2)${CL} Configurar ServerBlock"
+        echo -e "${RO} x)${CL} Desinstalar Nginx"
+        echo
+        echo -e "${CY} v)${CL} Volver"
+        echo -e "${AZ}==================================================${CL}"
+        
+        read -n 1 -p "Seleccione una opción: " opc
+        echo
+        
+        case $opc in
+            1) modulo_web_nginx_instalar ;;
+            2) modulo_web_nginx_vhost ;;
+            x|X) modulo_web_nginx_desinstalar ;;
+            v|V) break ;;
+            *) opcion_invalida ;;
+        esac
+    done
+}
+
+menu_web_apache() {
+    while true; do
+        clear
+        echo -e "${AZ}==================================================${CL}"
+        echo -e "${VE}   🌐  Servidor Web: Apache${CL}"
+        echo -e "${AZ}==================================================${CL}"
+        echo -e "${CY} 1)${CL} Instalar Apache"
+        echo -e "${CY} 2)${CL} Configurar VirtualHost"
+        echo -e "${RO} x)${CL} Desinstalar Apache"
+        echo
+        echo -e "${CY} v)${CL} Volver"
+        echo -e "${AZ}==================================================${CL}"
+        
+        read -n 1 -p "Seleccione una opción: " opc
+        echo
+        
+        case $opc in
+            1) modulo_web_apache_instalar ;;
+            2) modulo_web_apache_vhost ;;
+            x|X) modulo_web_apache_desinstalar ;;
+            v|V) break ;;
+            *) opcion_invalida ;;
+        esac
+    done
+}
+
+menu_web() {
+    while true; do
+        clear
+        echo -e "${AZ}==================================================${CL}"
+        echo -e "${VE}   🌐  Gestor de Servidores Web${CL}"
+        echo -e "${AZ}==================================================${CL}"
+        echo -e "${CY} 1)${CL} Nginx"
+        echo -e "${CY} 2)${CL} Apache"
+        echo
+        echo -e "${CY} v)${CL} Volver al menú principal"
+        echo -e "${AZ}==================================================${CL}"
+        
+        read -n 1 -p "Seleccione una opción: " opc
+        echo
+        
+        case $opc in
+            1) menu_web_nginx ;;
+            2) menu_web_apache ;;
+            v|V) break ;;
+            *) opcion_invalida ;;
+        esac
+    done
+}
+
 menu_db_mariadb() {
     while true; do
         clear
@@ -475,6 +741,7 @@ menu_principal() {
         echo -e "${AZ}==================================================${CL}"
         echo -e "${CY} 1)${CL} 🛠️  Configuraciones Iniciales del S.O (Server Base)"
         echo -e "${CY} 2)${CL} 🗄️  Bases de Datos (MariaDB / PostgreSQL)"
+        echo -e "${CY} 3)${CL} 🌐  Servidores Web (Nginx / Apache)"
         echo
         echo -e "${RO} s)${CL} Salir del Asistente"
         echo -e "${AZ}==================================================${CL}"
@@ -485,6 +752,7 @@ menu_principal() {
         case $opc in
             1) modulo_server ;;
             2) menu_db ;;
+            3) menu_web ;;
             s|S)
                 echo -e "\n${VE}¡Hasta pronto!${CL}"
                 exit 0
