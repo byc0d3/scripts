@@ -988,9 +988,172 @@ menu_redes() {
     done
 }
 
+
+# ==============================================================================
+# MÓDULOS DE ALMACENAMIENTO (LVM)
+# ==============================================================================
+
+modulo_lvm_nuevo_disco() {
+    clear
+    echo -e "${AZ}======================================================${CL}"
+    echo -e "${VE}   ➤ Añadir disco nuevo a LVM${CL}"
+    echo -e "${AZ}======================================================${CL}"
+    
+    read -p "Introduce el nuevo disco (ej. /dev/sdc): " NUEVO_DISCO
+    read -p "Introduce la ruta a extender (ej. /home): " RUTA
+
+    if [[ -z "$NUEVO_DISCO" || -z "$RUTA" ]]; then
+        echo -e "${RO}❌ Error: El disco y la ruta son obligatorios.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+        return
+    fi
+
+    if [[ ! -b "$NUEVO_DISCO" ]]; then
+        echo -e "${RO}❌ Error: El disco '$NUEVO_DISCO' no existe o no es válido.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+        return
+    fi
+
+    if [[ ! -d "$RUTA" ]]; then
+        echo -e "${RO}❌ Error: El directorio '$RUTA' no existe.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+        return
+    fi
+
+    echo -n "¿Deseas aplicar esta configuración? Escribe yes para continuar: "
+    read confirmar
+    if [ "$confirmar" == "yes" ]; then
+        check_root
+        LV_PATH=$(df "$RUTA" --output=source | tail -1)
+        if ! lvs "$LV_PATH" > /dev/null 2>&1; then
+            echo -e "${RO}❌ Error: '$LV_PATH' no parece ser un Volumen Lógico de LVM.${CL}"
+            read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+            return
+        fi
+
+        VG_NAME=$(lvs --noheadings -o vg_name "$LV_PATH" | xargs)
+        if pvs "$NUEVO_DISCO" > /dev/null 2>&1; then
+            echo -e "${RO}❌ Error: El disco ya forma parte de un LVM existente.${CL}"
+            read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+            return
+        fi
+
+        echo "Creando Physical Volume (PV)..."
+        pvcreate -y "$NUEVO_DISCO" > /dev/null
+        echo "Añadiendo el disco al Volume Group '$VG_NAME'..."
+        vgextend "$VG_NAME" "$NUEVO_DISCO" > /dev/null
+        echo "Extendiendo Logical Volume y File System..."
+        lvextend -l +100%FREE "$LV_PATH" -r > /dev/null
+        
+        echo -e "
+${VE}Estado final:${CL}"
+        df -h "$RUTA" | awk 'NR==2{print "  Tamaño: "$2" | Usado: "$3" | Disp: "$4" ("$5")"}'
+        proceso_finalizado
+        read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
+    else
+        proceso_cancelado
+    fi
+}
+
+modulo_lvm_extender_existente() {
+    clear
+    echo -e "${AZ}======================================================${CL}"
+    echo -e "${VE}   ➤ Extender un disco existente en LVM${CL}"
+    echo -e "${AZ}======================================================${CL}"
+    
+    read -p "Físico ampliado (ej. /dev/sda2 o /dev/sdb): " PV_DISK
+    read -p "Ruta a extender (ej. / o /home): " RUTA
+
+    if [[ -z "$PV_DISK" || -z "$RUTA" ]]; then
+        echo -e "${RO}❌ Error: El disco y la ruta son obligatorios.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+        return
+    fi
+
+    if [[ ! -b "$PV_DISK" ]]; then
+        echo -e "${RO}❌ Error: '$PV_DISK' no existe o no es válido.${CL}"
+        read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+        return
+    fi
+
+    echo -n "¿Deseas aplicar esta configuración? Escribe yes para continuar: "
+    read confirmar
+    if [ "$confirmar" == "yes" ]; then
+        check_root
+        PKNAME=$(lsblk -no PKNAME "$PV_DISK" | tr -d ' ' | head -n 1)
+
+        if [[ -n "$PKNAME" ]]; then
+            PARENT_DISK="/dev/$PKNAME"
+            PART_NUM=$(echo "$PV_DISK" | grep -oE '[0-9]+$')
+            echo "Solicitando rescan al Kernel e inyectando espacio a la partición..."
+            echo 1 > "/sys/class/block/${PKNAME}/device/rescan" 2>/dev/null || true
+            
+            if command -v parted &> /dev/null; then
+                parted -s -a opt "$PARENT_DISK" "resizepart" "$PART_NUM" "100%" > /dev/null 2>&1 || true
+            elif command -v growpart &> /dev/null; then
+                growpart "$PARENT_DISK" "$PART_NUM" > /dev/null 2>&1 || true
+            else
+                echo -e "${RO}❌ Error: No se encontraron 'parted' ni 'growpart' en el sistema.${CL}"
+                read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+                return
+            fi
+        else
+            echo "Solicitando rescan al Kernel..."
+            DISK_NAME=$(basename "$PV_DISK")
+            echo 1 > "/sys/class/block/${DISK_NAME}/device/rescan" 2>/dev/null || true
+        fi
+
+        echo "Actualizando Physical Volume (pvresize)..."
+        pvresize "$PV_DISK" > /dev/null
+
+        LV_PATH=$(df "$RUTA" --output=source | tail -1)
+        if ! lvs "$LV_PATH" > /dev/null 2>&1; then
+            echo -e "${RO}❌ Error: '$LV_PATH' no parece ser un Volumen Lógico.${CL}"
+            read -n 1 -s -r -p "Presiona cualquier tecla para continuar..."
+            return
+        fi
+
+        echo "Extendiendo Logical Volume y File System en cascada..."
+        lvextend -l +100%FREE "$LV_PATH" -r > /dev/null
+        
+        echo -e "
+${VE}Estado final:${CL}"
+        df -h "$RUTA" | awk 'NR==2{print "  Tamaño: "$2" | Usado: "$3" | Disp: "$4" ("$5")"}'
+        proceso_finalizado
+        read -n 1 -s -r -p "Presiona cualquier tecla para volver..."
+    else
+        proceso_cancelado
+    fi
+}
+
+menu_lvm() {
+    while true; do
+        clear
+        echo -e "${AZ}==================================================${CL}"
+        echo -e "${VE}   💾  Gestor de Almacenamiento (LVM)${CL}"
+        echo -e "${AZ}==================================================${CL}"
+        echo -e "${CY} 1)${CL} Añadir disco nuevo a un LVM existente"
+        echo -e "${CY} 2)${CL} Extender un disco existente en LVM"
+        echo
+        echo -e "${CY} v)${CL} Volver al menú principal"
+        echo -e "${AZ}==================================================${CL}"
+        
+        read -n 1 -p "Seleccione una opción: " opc
+        echo
+        
+        case $opc in
+            1) modulo_lvm_nuevo_disco ;;
+            2) modulo_lvm_extender_existente ;;
+            v|V) break ;;
+            *) opcion_invalida ;;
+        esac
+    done
+}
+
 # ==============================================================================
 # MENÚ PRINCIPAL
 # ==============================================================================
+
 
 
 
@@ -1010,6 +1173,7 @@ menu_principal() {
         echo -e "${CY} 3)${CL} 🌐  Servidores Web (Nginx / Apache)"
         echo -e "${CY} 4)${CL} 🐘  Gestor de PHP (Multi-versión)"
         echo -e "${CY} 5)${CL} 🔌  Gestor de Redes (Interfaces / PBR)"
+        echo -e "${CY} 6)${CL} 💾  Gestor de Almacenamiento (LVM)"
         echo
         echo -e "${RO} s)${CL} Salir del Asistente"
         echo -e "${AZ}==================================================${CL}"
@@ -1023,6 +1187,7 @@ menu_principal() {
             3) menu_web ;;
             4) menu_php ;;
             5) menu_redes ;;
+            6) menu_lvm ;;
             s|S)
                 echo -e "\n${VE}¡Hasta pronto!${CL}"
                 exit 0
