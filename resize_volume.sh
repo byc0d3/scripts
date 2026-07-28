@@ -69,7 +69,8 @@ analyze_and_grow() {
 
     if [[ -n "$PKNAME" ]]; then
         PARENT_DISK="/dev/$PKNAME"
-        PART_NUM=$(lsblk -no PARTN "$PV_DISK" | tr -d ' ' | head -n 1)
+        # Extraemos el número de partición (los dígitos finales) de forma universal
+        PART_NUM=$(echo "$PV_DISK" | grep -oE '[0-9]+$')
         echo " ✓ Detectado LVM sobre Partición (Disco Padre: $PARENT_DISK, Partición: $PART_NUM)"
 
         echo "[3/5] Solicitando rescan al Kernel e inyectando espacio a la partición..."
