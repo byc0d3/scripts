@@ -194,7 +194,7 @@ modulo_web_nginx_instalar() {
         echo -e "${AZ}======================================================${CL}"
         echo -e "${VE}   ➤ Instalar Nginx${CL}"
         echo -e "${AZ}======================================================${CL}"
-        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        echo -e -n "¿Deseas continuar con el proceso? Escribe ${RO}yes${CL} para continuar: "
         read confirmar
         if [ "$confirmar" == "yes" ]; then
             check_root
@@ -215,7 +215,7 @@ modulo_web_nginx_vhost() {
         echo -e "${AZ}======================================================${CL}"
         echo -e "${VE}   ➤ Configurar ServerBlock Nginx${CL}"
         echo -e "${AZ}======================================================${CL}"
-        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        echo -e -n "¿Deseas continuar con el proceso? Escribe ${RO}yes${CL} para continuar: "
         read confirmar
         if [ "$confirmar" == "yes" ]; then
             check_root
@@ -239,7 +239,7 @@ modulo_web_nginx_desinstalar() {
         echo -e "${AZ}======================================================${CL}"
         echo -e "${RO}   ➤ Desinstalar Nginx${CL}"
         echo -e "${AZ}======================================================${CL}"
-        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        echo -e -n "¿Deseas continuar con el proceso? Escribe ${RO}yes${CL} para continuar: "
         read confirmar
         if [ "$confirmar" == "yes" ]; then
             check_root
@@ -267,7 +267,7 @@ modulo_web_apache_instalar() {
         echo -e "${AZ}======================================================${CL}"
         echo -e "${VE}   ➤ Instalar Apache${CL}"
         echo -e "${AZ}======================================================${CL}"
-        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        echo -e -n "¿Deseas continuar con el proceso? Escribe ${RO}yes${CL} para continuar: "
         read confirmar
         if [ "$confirmar" == "yes" ]; then
             check_root
@@ -288,7 +288,7 @@ modulo_web_apache_vhost() {
         echo -e "${AZ}======================================================${CL}"
         echo -e "${VE}   ➤ Configurar VirtualHost Apache${CL}"
         echo -e "${AZ}======================================================${CL}"
-        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        echo -e -n "¿Deseas continuar con el proceso? Escribe ${RO}yes${CL} para continuar: "
         read confirmar
         if [ "$confirmar" == "yes" ]; then
             check_root
@@ -312,7 +312,7 @@ modulo_web_apache_desinstalar() {
         echo -e "${AZ}======================================================${CL}"
         echo -e "${RO}   ➤ Desinstalar Apache${CL}"
         echo -e "${AZ}======================================================${CL}"
-        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        echo -e -n "¿Deseas continuar con el proceso? Escribe ${RO}yes${CL} para continuar: "
         read confirmar
         if [ "$confirmar" == "yes" ]; then
             check_root
@@ -347,7 +347,7 @@ modulo_db_mariadb_instalar() {
     echo -e "${AZ}======================================================${CL}"
     echo -e "${VE}   ➤ Instalar y Securizar MariaDB${CL}"
     echo -e "${AZ}======================================================${CL}"
-    echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+    echo -e -n "¿Deseas continuar con el proceso? Escribe ${RO}yes${CL} para continuar: "
     read confirmar
     if [ "$confirmar" == "yes" ]; then
         check_root
@@ -442,7 +442,7 @@ modulo_db_mariadb_desinstalar() {
         echo -e "${RO}   ➤ Desinstalar MariaDB${CL}"
         echo -e "${AZ}======================================================${CL}"
         echo -e "⚠️  ATENCIÓN: Esto eliminará la base de datos y todos sus datos."
-        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        echo -e -n "¿Deseas continuar con el proceso? Escribe ${RO}yes${CL} para continuar: "
         read confirmar
         if [ "$confirmar" == "yes" ]; then
             check_root
@@ -483,7 +483,7 @@ modulo_db_postgres_instalar() {
     echo -e "${AZ}======================================================${CL}"
     echo -e "${VE}   ➤ Instalar y Securizar PostgreSQL${CL}"
     echo -e "${AZ}======================================================${CL}"
-    echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+    echo -e -n "¿Deseas continuar con el proceso? Escribe ${RO}yes${CL} para continuar: "
     read confirmar
     if [ "$confirmar" == "yes" ]; then
         check_root
@@ -570,7 +570,7 @@ modulo_db_postgres_desinstalar() {
         echo -e "${RO}   ➤ Desinstalar PostgreSQL${CL}"
         echo -e "${AZ}======================================================${CL}"
         echo -e "⚠️  ATENCIÓN: Esto eliminará la base de datos y todos sus datos."
-        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        echo -e -n "¿Deseas continuar con el proceso? Escribe ${RO}yes${CL} para continuar: "
         read confirmar
         if [ "$confirmar" == "yes" ]; then
             check_root
@@ -764,7 +764,7 @@ instalar_php() {
     echo -e "${AZ}======================================================${CL}"
     echo -e "${VE}   ➤ Instalar PHP ${PHP_V}${CL}"
     echo -e "${AZ}======================================================${CL}"
-    echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+    echo -e -n "¿Deseas continuar con el proceso? Escribe ${RO}yes${CL} para continuar: "
     read confirmar
     if [ "$confirmar" == "yes" ]; then
         check_root
@@ -812,7 +812,7 @@ modulo_php_desinstalar() {
         echo -e "${AZ}======================================================${CL}"
         echo -e "${RO}   ➤ Desinstalar PHP${CL}"
         echo -e "${AZ}======================================================${CL}"
-        echo -n "¿Deseas continuar con el proceso? Escribe yes para continuar: "
+        echo -e -n "¿Deseas continuar con el proceso? Escribe ${RO}yes${CL} para continuar: "
         read confirmar
         if [ "$confirmar" == "yes" ]; then
             check_root
@@ -895,7 +895,7 @@ modulo_redes_con_ruta() {
         return
     fi
 
-    echo -n "¿Deseas aplicar esta configuración? Escribe yes para continuar: "
+    echo -e -n "¿Deseas aplicar esta configuración? Escribe ${RO}yes${CL} para continuar: "
     read confirmar
     if [ "$confirmar" == "yes" ]; then
         check_root
@@ -941,7 +941,7 @@ modulo_redes_sin_ruta() {
         return
     fi
 
-    echo -n "¿Deseas aplicar esta configuración? Escribe yes para continuar: "
+    echo -e -n "¿Deseas aplicar esta configuración? Escribe ${RO}yes${CL} para continuar: "
     read confirmar
     if [ "$confirmar" == "yes" ]; then
         check_root
@@ -979,7 +979,7 @@ modulo_redes_eliminar() {
     fi
 
     echo -e "⚠️  ATENCIÓN: Se eliminará la conexión '$DEVICE'."
-    echo -n "¿Deseas continuar? Escribe yes para confirmar: "
+    echo -e -n "¿Deseas continuar? Escribe ${RO}yes${CL} para confirmar: "
     read confirmar
     if [ "$confirmar" == "yes" ]; then
         check_root
@@ -1050,7 +1050,7 @@ modulo_lvm_nuevo_disco() {
         return
     fi
 
-    echo -n "¿Deseas aplicar esta configuración? Escribe yes para continuar: "
+    echo -e -n "¿Deseas aplicar esta configuración? Escribe ${RO}yes${CL} para continuar: "
     read confirmar
     if [ "$confirmar" == "yes" ]; then
         check_root
@@ -1105,7 +1105,7 @@ modulo_lvm_extender_existente() {
         return
     fi
 
-    echo -n "¿Deseas aplicar esta configuración? Escribe yes para continuar: "
+    echo -e -n "¿Deseas aplicar esta configuración? Escribe ${RO}yes${CL} para continuar: "
     read confirmar
     if [ "$confirmar" == "yes" ]; then
         check_root
