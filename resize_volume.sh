@@ -75,16 +75,19 @@ analyze_and_grow() {
 
         echo "[3/5] Solicitando rescan al Kernel e inyectando espacio a la partición..."
         echo 1 > "/sys/class/block/${PKNAME}/device/rescan" 2>/dev/null || true
-
-        # Verificar que la herramienta growpart exista
-        if ! command -v growpart &> /dev/null; then
-            echo "   -> Instalando 'cloud-utils-growpart'..."
-            dnf install -y cloud-utils-growpart > /dev/null 2>&1
+        
+        # Intentar usar herramientas integradas sin instalar nada nuevo
+        if command -v parted &> /dev/null; then
+            echo "   -> Ejecutando 'parted' para extender partición..."
+            parted -s -a opt "$PARENT_DISK" "resizepart" "$PART_NUM" "100%" > /dev/null 2>&1 || true
+        elif command -v growpart &> /dev/null; then
+            echo "   -> Ejecutando 'growpart' para extender partición..."
+            growpart "$PARENT_DISK" "$PART_NUM" > /dev/null 2>&1 || true
+        else
+            echo "❌ Error: No se encontraron 'parted' ni 'growpart' en el sistema." >&2
+            echo "Instale una de estas herramientas o redimensione la partición manualmente." >&2
+            exit 1
         fi
-
-        # Growpart puede fallar (código 1) si la partición ya estaba crecida, usamos || true
-        echo "   -> Ejecutando growpart..."
-        growpart "$PARENT_DISK" "$PART_NUM" > /dev/null 2>&1 || echo "   -> (Info: La partición ya estaba extendida o no hubo cambios físicos)."
 
     else
         echo " ✓ Detectado LVM sobre Disco Crudo (Sin particiones)."
