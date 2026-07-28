@@ -7,31 +7,25 @@ set -eo pipefail
 #              autosuggestions, completions) y alias mejorados (bat, lsd).
 #
 # Pasos generales:
-#   1. Validación de root y dependencias.
-#   2. Instalación de paquetes y utilidades de terminal.
-#   3. Instalación desatendida de Oh-My-Zsh y clonación de plugins.
+#   1. Instalación de paquetes y utilidades (requiere permisos sudo internos).
+#   2. Instalación desatendida de Oh-My-Zsh en el directorio del usuario local.
+#   3. Clonación de plugins en la carpeta del usuario.
 #   4. Inyección de plugins en .zshrc y creación de .alias.
 #   5. Establecer Zsh como shell por defecto.
 #
-# Uso:
-#   curl -fsSL "https://raw.githubusercontent.com/byc0d3/tools/main/scripts/bash/zsh.sh?$(date +%s)" -o /tmp/zsh.sh && sudo bash /tmp/zsh.sh && rm -f /tmp/zsh.sh
+# Uso (Ejecutar SIN sudo al principio):
+#   curl -fsSL "URL" -o /tmp/zsh.sh && bash /tmp/zsh.sh
 # ==============================================================================
-
-check_root() {
-    if [[ $EUID -ne 0 ]]; then
-        echo "❌ Este script debe ejecutarse como root." >&2
-        exit 1
-    fi
-}
 
 install_packages() {
     echo "[1/4] Instalando dependencias (zsh, bat, lsd, git, util-linux-user)..."
+    echo " -> Se solicitará tu contraseña para instalar paquetes vía dnf."
     
     # Habilitamos EPEL por si bat o lsd lo necesitan
-    dnf install -y epel-release > /dev/null 2>&1 || true
+    sudo dnf install -y epel-release > /dev/null 2>&1 || true
     
     # util-linux-user es necesario en Rocky 9 para tener el comando 'chsh'
-    dnf install -y zsh bat lsd git wget curl util-linux-user > /dev/null
+    sudo dnf install -y zsh bat lsd git wget curl util-linux-user > /dev/null
 }
 
 install_ohmyzsh() {
@@ -40,11 +34,10 @@ install_ohmyzsh() {
     local OMZ_DIR="$HOME/.oh-my-zsh"
     
     if [ -d "$OMZ_DIR" ]; then
-        echo " ✓ Oh-My-Zsh ya está instalado, omitiendo instalación base..."
+        echo " ✓ Oh-My-Zsh ya está instalado en $OMZ_DIR, omitiendo..."
     else
-        # Instalación desatendida de Oh-My-Zsh
-        echo " -> Descargando script oficial..."
-        RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" > /dev/null 2>&1
+        echo " -> Descargando script oficial de Oh-My-Zsh..."
+        RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" || true
     fi
     
     local PLUGINS_DIR="${OMZ_DIR}/custom/plugins"
@@ -77,7 +70,6 @@ configure_zsh() {
     
     if [ -f "$ZSHRC" ]; then
         # Reemplazar la línea de plugins por defecto con nuestros plugins
-        # Usamos una sola línea para evitar problemas con sed multilínea
         sed -i -E 's/^plugins=\(.*\)/plugins=(sudo git z zsh-autosuggestions zsh-syntax-highlighting zsh-completions)/g' "$ZSHRC"
         
         # Asegurarnos de que el archivo de alias se cargue al final
@@ -116,12 +108,13 @@ EOF
 finalize() {
     echo "[4/4] Estableciendo Zsh como shell por defecto..."
     
-    chsh -s $(which zsh) "$USER" > /dev/null 2>&1 || true
+    # Se requiere sudo para cambiar el shell
+    sudo chsh -s $(which zsh) "$USER" > /dev/null 2>&1 || true
     
     echo "--------------------------------------------------"
     echo "✅ CONFIGURACIÓN DE ZSH COMPLETADA"
     echo "--------------------------------------------------"
-    echo "Tus plugins y alias (bat, lsd, gitp) están listos."
+    echo "Tus plugins y alias están listos en tu usuario ($USER)."
     echo "Para aplicar los cambios, ejecuta:"
     echo "    exec zsh"
     echo "--------------------------------------------------"
@@ -133,7 +126,6 @@ finalize() {
 main() {
     echo "--- SYSADMIN: Zsh & Oh-My-Zsh Setup ---"
     
-    check_root
     install_packages
     install_ohmyzsh
     configure_zsh
