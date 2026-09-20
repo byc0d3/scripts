@@ -247,9 +247,12 @@ ALIAS_EOF
 
 # 7. Archivos SSH
 mkdir -p ~/.ssh
+touch ~/.ssh/servers
+touch ~/.ssh/server
+touch ~/.ssh/config
 touch ~/.ssh/servers ~/.ssh/config
 chmod 700 ~/.ssh
-chmod 600 ~/.ssh/servers ~/.ssh/config
+chmod 600 ~/.ssh/servers ~/.ssh/server ~/.ssh/config
 
 echo "✅ Entorno Zsh configurado."
 USEREOF
