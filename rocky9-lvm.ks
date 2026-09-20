@@ -5,12 +5,11 @@ clearpart --all --initlabel
 
 # --- Gestor de Arranque ---
 bootloader --location=mbr --driveorder=sda --append="crashkernel=auto"
-
-# --- Esquema de Particiones LVM ---
-# Nota: Ajusta --ondisk según tu VM en Proxmox (sda o vda)
-part /boot --fstype="xfs" --ondisk=sda --size=1024
-part /boot/efi --fstype="efi" --ondisk=sda --size=1024 --fsoptions="umask=0077,shortname=winnt"
-part pv.01 --fstype="lvmpv" --ondisk=sda --size=1 --grow
+k# --- Esquema de Particiones LVM ---
+# Nota: Ajustado a vda porque el disco en Proxmox es VirtIO
+part /boot --fstype="xfs" --ondisk=vda --size=1024
+part /boot/efi --fstype="efi" --ondisk=vda --size=1024 --fsoptions="umask=0077,shortname=winnt"
+part pv.01 --fstype="lvmpv" --ondisk=vda --size=1 --grow
 
 volgroup rlm pv.01 --pesize=4096
 
